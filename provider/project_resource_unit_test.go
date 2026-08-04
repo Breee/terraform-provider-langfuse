@@ -10,8 +10,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/langfuse/terraform-provider-langfuse/langfuse"
-	"github.com/langfuse/terraform-provider-langfuse/langfuse/mocks"
+	"github.com/Breee/terraform-provider-langfuse/langfuse"
+	"github.com/Breee/terraform-provider-langfuse/langfuse/mocks"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	resschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"

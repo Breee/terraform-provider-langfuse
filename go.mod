@@ -1,4 +1,4 @@
-module github.com/langfuse/terraform-provider-langfuse
+module github.com/Breee/terraform-provider-langfuse
 
 go 1.24.2
 

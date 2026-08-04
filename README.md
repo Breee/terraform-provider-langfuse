@@ -42,7 +42,7 @@ For development and testing:
 
 ```bash
 # Clone the repository
-git clone https://github.com/langfuse/terraform-provider-langfuse
+git clone https://github.com/Breee/terraform-provider-langfuse
 cd terraform-provider-langfuse
 
 # Build the provider
@@ -425,7 +425,7 @@ resource "langfuse_llm_connection" "my_gateway" {
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/langfuse/terraform-provider-langfuse
+   git clone https://github.com/Breee/terraform-provider-langfuse
    cd terraform-provider-langfuse
    ```
 
@@ -502,8 +502,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 - 📚 [Langfuse Documentation](https://langfuse.com/docs)
-- 🐛 [Report Issues](https://github.com/langfuse/terraform-provider-langfuse/issues)
-- 💬 [Community Discussions](https://github.com/langfuse/terraform-provider-langfuse/discussions)
+- 🐛 [Report Issues](https://github.com/Breee/terraform-provider-langfuse/issues)
+- 💬 [Community Discussions](https://github.com/Breee/terraform-provider-langfuse/discussions)
 
 ## Changelog
 
