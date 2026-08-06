@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Breee/terraform-provider-langfuse/langfuse"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/Breee/terraform-provider-langfuse/langfuse"
 )
 
 var _ resource.Resource = &organizationResource{}
@@ -122,10 +122,37 @@ func (r *organizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	// An empty ID means the external resource has not been established yet.
+	// Returning resource-absent here lets the reconciler execute create.
+	if data.ID.IsNull() || data.ID.IsUnknown() || data.ID.ValueString() == "" {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	org, err := r.AdminClient.GetOrganization(ctx, data.ID.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading organization", err.Error())
-		return
+		if strings.Contains(err.Error(), "status code 404") || strings.Contains(err.Error(), "Organization not found") {
+			if !data.Name.IsNull() && !data.Name.IsUnknown() && data.Name.ValueString() != "" {
+				orgs, listErr := r.AdminClient.ListOrganizations(ctx)
+				if listErr == nil {
+					for _, candidate := range orgs {
+						if candidate != nil && candidate.Name == data.Name.ValueString() {
+							org = candidate
+							err = nil
+							break
+						}
+					}
+				}
+			}
+			if err != nil {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Error reading organization", err.Error())
+			return
+		}
 	}
 
 	var metadataMap types.Map
