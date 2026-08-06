@@ -368,6 +368,10 @@ func (r *organizationMembershipResource) Delete(ctx context.Context, req resourc
 
 	err := organizationClient.RemoveMember(ctx, state.UserID.ValueString())
 	if err != nil {
+		if errors.Is(err, langfuse.ErrMembershipNotFound) || strings.Contains(err.Error(), "status code 404") {
+			return
+		}
+
 		resp.Diagnostics.AddError("Error removing member", err.Error())
 		return
 	}

@@ -549,6 +549,7 @@ func TestProjectMembershipResourceErrorHandling(t *testing.T) {
 			t.Errorf("expected 'Error removing project member' error, got: %v", deleteResp.Diagnostics)
 		}
 	})
+
 }
 
 func TestProjectMembershipResourceImport(t *testing.T) {

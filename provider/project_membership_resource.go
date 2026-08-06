@@ -265,6 +265,10 @@ func (r *projectMembershipResource) Delete(ctx context.Context, req resource.Del
 
 	err := organizationClient.DeleteProjectMembership(ctx, state.ProjectID.ValueString(), state.UserID.ValueString())
 	if err != nil {
+		if errors.Is(err, langfuse.ErrProjectMembershipNotFound) || strings.Contains(err.Error(), "status code 404") {
+			return
+		}
+
 		resp.Diagnostics.AddError("Error removing project member", err.Error())
 		return
 	}
