@@ -39,7 +39,7 @@ func decodeResponse(resp *http.Response, target any) error {
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
-	if err = json.Unmarshal(body, &target); err != nil {
+	if err = json.Unmarshal(body, target); err != nil {
 		return fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
