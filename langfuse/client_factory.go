@@ -1,5 +1,16 @@
 package langfuse
 
+import "github.com/langfuse/terraform-provider-langfuse/langfuse/publicapi"
+
+func newPublicAPIClient(host, publicKey, privateKey string) *publicapi.ClientWithResponses {
+	api, err := publicapi.NewClientWithResponses(host, publicapi.WithRequestEditorFn(basicAuth(publicKey, privateKey)))
+	if err != nil {
+		// Unreachable: only client options can fail, and WithRequestEditorFn never does.
+		panic(err)
+	}
+	return api
+}
+
 type clientFactoryImpl struct {
 	host        string
 	adminApiKey string

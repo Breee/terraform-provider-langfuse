@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
+	"time"
+
+	"github.com/langfuse/terraform-provider-langfuse/langfuse/publicapi"
 )
 
 //go:generate mockgen -destination=./mocks/mock_llm_connections_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse LlmConnectionsClient
@@ -46,10 +48,6 @@ type PaginationMeta struct {
 	TotalPages int `json:"totalPages"`
 }
 
-type deleteLlmConnectionResponse struct {
-	Message string `json:"message"`
-}
-
 type LlmConnectionsClient interface {
 	ListLlmConnections(ctx context.Context, page, limit *int) (*ListLlmConnectionsResponse, error)
 	UpsertLlmConnection(ctx context.Context, req *UpsertLlmConnectionRequest) (*LlmConnection, error)
@@ -57,103 +55,102 @@ type LlmConnectionsClient interface {
 }
 
 type llmConnectionsClientImpl struct {
-	host       string
-	publicKey  string
-	privateKey string
-	httpClient *http.Client
+	api *publicapi.ClientWithResponses
 }
 
 func NewLlmConnectionsClient(host, publicKey, privateKey string) LlmConnectionsClient {
-	return &llmConnectionsClientImpl{
-		host:       host,
-		publicKey:  publicKey,
-		privateKey: privateKey,
-		httpClient: &http.Client{},
-	}
+	return &llmConnectionsClientImpl{api: newPublicAPIClient(host, publicKey, privateKey)}
 }
 
-func (c *llmConnectionsClientImpl) makeRequest(ctx context.Context, methodType, apiPath string, body any) (*http.Response, error) {
-	req, err := buildBaseRequest(ctx, methodType, buildURL(c.host, apiPath), body)
-	if err != nil {
-		return nil, err
+func toLlmConnection(c *publicapi.LlmConnection) *LlmConnection {
+	conn := &LlmConnection{
+		ID:                c.ID,
+		Provider:          c.Provider,
+		Adapter:           c.Adapter,
+		DisplaySecretKey:  c.DisplaySecretKey,
+		CustomModels:      c.CustomModels,
+		WithDefaultModels: c.WithDefaultModels,
+		ExtraHeaderKeys:   c.ExtraHeaderKeys,
+		CreatedAt:         c.CreatedAt.Format(time.RFC3339Nano),
+		UpdatedAt:         c.UpdatedAt.Format(time.RFC3339Nano),
 	}
-	req.SetBasicAuth(c.publicKey, c.privateKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
+	if c.BaseURL != nil {
+		conn.BaseURL = *c.BaseURL
 	}
-
-	return resp, nil
+	if c.Config != nil {
+		conn.Config = *c.Config
+	}
+	return conn
 }
 
 func (c *llmConnectionsClientImpl) ListLlmConnections(ctx context.Context, page, limit *int) (*ListLlmConnectionsResponse, error) {
-	baseURL := buildURL(c.host, "api/public/llm-connections")
-
-	if page != nil || limit != nil {
-		parsed, err := url.Parse(baseURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse llm connections URL: %w", err)
-		}
-		q := url.Values{}
-		if page != nil {
-			q.Set("page", fmt.Sprintf("%d", *page))
-		}
-		if limit != nil {
-			q.Set("limit", fmt.Sprintf("%d", *limit))
-		}
-		parsed.RawQuery = q.Encode()
-		baseURL = parsed.String()
-	}
-
-	req, err := buildBaseRequest(ctx, http.MethodGet, baseURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build list llm connections request: %w", err)
-	}
-	req.SetBasicAuth(c.publicKey, c.privateKey)
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.api.LlmConnectionsListWithResponse(ctx, &publicapi.LlmConnectionsListParams{Page: page, Limit: limit})
 	if err != nil {
 		return nil, fmt.Errorf("failed to make list llm connections request: %w", err)
 	}
-
-	var listResp ListLlmConnectionsResponse
-	if err := decodeResponse(resp, &listResp); err != nil {
+	list, err := payload(resp, resp.JSON200)
+	if err != nil {
 		return nil, err
 	}
 
-	return &listResp, nil
+	out := &ListLlmConnectionsResponse{
+		Data: make([]LlmConnection, 0, len(list.Data)),
+		Meta: PaginationMeta{
+			Page:       list.Meta.Page,
+			Limit:      list.Meta.Limit,
+			TotalItems: list.Meta.TotalItems,
+			TotalPages: list.Meta.TotalPages,
+		},
+	}
+	for i := range list.Data {
+		out.Data = append(out.Data, *toLlmConnection(&list.Data[i]))
+	}
+	return out, nil
 }
 
 func (c *llmConnectionsClientImpl) UpsertLlmConnection(ctx context.Context, req *UpsertLlmConnectionRequest) (*LlmConnection, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPut, "api/public/llm-connections", req)
+	body := publicapi.LlmConnectionsUpsertJSONRequestBody{
+		Adapter:           publicapi.LlmAdapter(req.Adapter),
+		Provider:          req.Provider,
+		SecretKey:         req.SecretKey,
+		WithDefaultModels: req.WithDefaultModels,
+	}
+	if req.BaseURL != "" {
+		body.BaseURL = &req.BaseURL
+	}
+	if len(req.Config) > 0 {
+		body.Config = &req.Config
+	}
+	if len(req.CustomModels) > 0 {
+		body.CustomModels = &req.CustomModels
+	}
+	if len(req.ExtraHeaders) > 0 {
+		body.ExtraHeaders = &req.ExtraHeaders
+	}
+
+	resp, err := c.api.LlmConnectionsUpsertWithResponse(ctx, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make upsert llm connection request: %w", err)
 	}
-
-	var connection LlmConnection
-	if err := decodeResponse(resp, &connection); err != nil {
+	conn := resp.JSON200
+	if conn == nil {
+		conn = resp.JSON201
+	}
+	conn, err = payload(resp, conn)
+	if err != nil {
 		return nil, err
 	}
-
-	return &connection, nil
+	return toLlmConnection(conn), nil
 }
 
 func (c *llmConnectionsClientImpl) DeleteLlmConnection(ctx context.Context, id string) error {
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/public/llm-connections/%s", id), nil)
+	resp, err := c.api.LlmConnectionsDeleteWithResponse(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to make request: %w", err)
 	}
-
-	if resp.StatusCode == http.StatusNotFound {
-		_ = resp.Body.Close()
+	if resp.StatusCode() == http.StatusNotFound {
 		return nil
 	}
-
-	var deleteResp deleteLlmConnectionResponse
-	if err := decodeResponse(resp, &deleteResp); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = payload(resp, resp.JSON200)
+	return err
 }

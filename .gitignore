@@ -3,3 +3,6 @@ terraform.tfstate*
 
 terraform-provider-langfuse*
 testing/.env
+testing/.name_suffix
+testing/.terraformrc
+.work/

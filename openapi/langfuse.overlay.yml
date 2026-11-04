@@ -1,0 +1,49 @@
+overlay: 1.0.0
+info:
+  title: Langfuse public API corrections
+  version: 1.0.0
+# Each action aligns the spec with the status codes the Langfuse server actually returns
+# (verified against langfuse/langfuse web/src/pages/api/public). Drop an action once upstream fixes it.
+actions:
+  - target: $.paths['/api/public/projects'].post.responses
+    description: Project creation returns 201.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+  - target: $.paths['/api/public/projects'].post.responses['200']
+    remove: true
+  - target: $.paths['/api/public/projects/{projectId}/apiKeys'].post.responses
+    description: Project API key creation returns 201.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyResponse'
+  - target: $.paths['/api/public/projects/{projectId}/apiKeys'].post.responses['200']
+    remove: true
+  - target: $.paths['/api/public/scim/Users'].post.responses
+    description: SCIM user creation returns 201.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScimUser'
+  - target: $.paths['/api/public/scim/Users'].post.responses['200']
+    remove: true
+  - target: $.paths['/api/public/llm-connections'].put.responses
+    description: LLM connection upsert returns 201 on create and 200 on update.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmConnection'

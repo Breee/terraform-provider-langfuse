@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+# Paths are relative to ../../tools, where `make generate-api` runs oapi-codegen.
+package: publicapi
+output: ../langfuse/publicapi/publicapi.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  name-normalizer: ToCamelCaseWithInitialisms
+  overlay:
+    path: ../openapi/langfuse.overlay.yml
+    strict: true
+  include-operation-ids:
+    - projects_create
+    - projects_update
+    - projects_delete
+    - projects_getApiKeys
+    - projects_createApiKey
+    - projects_deleteApiKey
+    - organizations_getOrganizationProjects
+    - organizations_getOrganizationMemberships
+    - organizations_updateOrganizationMembership
+    - organizations_deleteOrganizationMembership
+    - organizations_getProjectMemberships
+    - organizations_updateProjectMembership
+    - organizations_deleteProjectMembership
+    - scim_createUser
+    - llmConnections_list
+    - llmConnections_upsert
+    - llmConnections_delete

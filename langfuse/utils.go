@@ -1,57 +1,62 @@
 package langfuse
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
-func buildBaseRequest(ctx context.Context, method, url string, body any) (*http.Request, error) {
-	var bodyReader io.Reader
-	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+// apiResponse is implemented by every generated *Response type.
+type apiResponse interface {
+	StatusCode() int
+	GetBody() []byte
+}
+
+// payload returns the decoded success body, or an error carrying the status and raw body of any other response.
+func payload[T any](resp apiResponse, value *T) (*T, error) {
+	if value == nil {
+		return nil, fmt.Errorf("request failed with status code %d, response body: %s", resp.StatusCode(), string(resp.GetBody()))
+	}
+	return value, nil
+}
+
+func basicAuth(publicKey, privateKey string) func(context.Context, *http.Request) error {
+	return func(_ context.Context, req *http.Request) error {
+		req.SetBasicAuth(publicKey, privateKey)
+		return nil
+	}
+}
+
+func bearerAuth(token string) func(context.Context, *http.Request) error {
+	return func(_ context.Context, req *http.Request) error {
+		req.Header.Set("Authorization", "Bearer "+token)
+		return nil
+	}
+}
+
+func stringMap(m map[string]any) (map[string]string, error) {
+	if m == nil {
+		return nil, nil
+	}
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("metadata value for key %q is %T, expected string", k, v)
 		}
-		bodyReader = bytes.NewReader(jsonBody)
+		out[k] = s
 	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	return req, nil
+	return out, nil
 }
 
-func decodeResponse(resp *http.Response, target any) error {
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("request failed with status code %d, response body: %s", resp.StatusCode, string(body))
+// anyMapPtr keeps the previous omitempty behaviour: nil and empty maps are not sent.
+func anyMapPtr(m map[string]string) *map[string]any {
+	if len(m) == 0 {
+		return nil
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		out[k] = v
 	}
-	if err = json.Unmarshal(body, &target); err != nil {
-		return fmt.Errorf("failed to unmarshal response body: %w", err)
-	}
-
-	return nil
-}
-
-func buildURL(host, apiPath string) string {
-	if host == "" {
-		return apiPath
-	}
-	if host[len(host)-1] == '/' {
-		return host + apiPath
-	}
-	return host + "/" + apiPath
+	return &out
 }

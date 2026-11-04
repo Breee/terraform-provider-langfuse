@@ -3,7 +3,8 @@ package langfuse
 import (
 	"context"
 	"fmt"
-	"net/http"
+
+	"github.com/langfuse/terraform-provider-langfuse/langfuse/adminapi"
 )
 
 type Organization struct {
@@ -18,10 +19,6 @@ type OrganizationApiKey struct {
 	SecretKey string `json:"secretKey"`
 }
 
-type ListOrganizationsResponse struct {
-	Organizations []*Organization `json:"organizations"`
-}
-
 type CreateOrganizationRequest struct {
 	Name     string            `json:"name"`
 	Metadata map[string]string `json:"metadata,omitempty"`
@@ -30,18 +27,6 @@ type CreateOrganizationRequest struct {
 type UpdateOrganizationRequest struct {
 	Name     string            `json:"name"`
 	Metadata map[string]string `json:"metadata,omitempty"`
-}
-
-type deleteOrganizationResponse struct {
-	Success bool `json:"success"`
-}
-
-type listOrganizationApiKeysResponse struct {
-	ApiKeys []OrganizationApiKey `json:"apiKeys"`
-}
-
-type deleteOrganizationApiKeyResponse struct {
-	Success bool `json:"success"`
 }
 
 //go:generate mockgen -destination=./mocks/mock_admin_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse AdminClient
@@ -58,105 +43,116 @@ type AdminClient interface {
 }
 
 type adminClientImpl struct {
-	host       string
-	apiKey     string
-	httpClient *http.Client
+	api *adminapi.ClientWithResponses
 }
 
 func NewAdminClient(host, apiKey string) AdminClient {
-	return &adminClientImpl{
-		host:       host,
-		apiKey:     apiKey,
-		httpClient: &http.Client{},
+	api, err := adminapi.NewClientWithResponses(host, adminapi.WithRequestEditorFn(bearerAuth(apiKey)))
+	if err != nil {
+		// Unreachable: only client options can fail, and WithRequestEditorFn never does.
+		panic(err)
 	}
+	return &adminClientImpl{api: api}
+}
+
+func toOrganization(o *adminapi.Organization) (*Organization, error) {
+	metadata, err := stringMap(o.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	return &Organization{ID: o.ID, Name: o.Name, Metadata: metadata}, nil
 }
 
 func (c *adminClientImpl) ListOrganizations(ctx context.Context) ([]*Organization, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, "api/admin/organizations", nil)
+	resp, err := c.api.OrganizationsGetAllWithResponse(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
 
-	var listOrgResp ListOrganizationsResponse
-	if err := decodeResponse(resp, &listOrgResp); err != nil {
-		return nil, err
+	orgs := make([]*Organization, 0, len(list.Organizations))
+	for i := range list.Organizations {
+		org, err := toOrganization(&list.Organizations[i])
+		if err != nil {
+			return nil, err
+		}
+		orgs = append(orgs, org)
 	}
-
-	return listOrgResp.Organizations, nil
+	return orgs, nil
 }
 
 func (c *adminClientImpl) GetOrganization(ctx context.Context, orgID string) (*Organization, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, fmt.Sprintf("api/admin/organizations/%s", orgID), nil)
+	resp, err := c.api.OrganizationsGetByIDWithResponse(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	org, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
-
-	var org Organization
-	if err := decodeResponse(resp, &org); err != nil {
-		return nil, err
-	}
-
-	return &org, nil
+	return toOrganization(org)
 }
 
 func (c *adminClientImpl) CreateOrganization(ctx context.Context, request *CreateOrganizationRequest) (*Organization, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPost, "api/admin/organizations", request)
+	resp, err := c.api.OrganizationsCreateWithResponse(ctx, adminapi.OrganizationsCreateJSONRequestBody{
+		Name:     request.Name,
+		Metadata: anyMapPtr(request.Metadata),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	org, err := payload(resp, resp.JSON201)
 	if err != nil {
 		return nil, err
 	}
-
-	var org Organization
-	if err := decodeResponse(resp, &org); err != nil {
-		return nil, err
-	}
-
-	return &org, nil
+	return toOrganization(org)
 }
 
 func (c *adminClientImpl) UpdateOrganization(ctx context.Context, orgID string, request *UpdateOrganizationRequest) (*Organization, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPut, fmt.Sprintf("api/admin/organizations/%s", orgID), request)
+	resp, err := c.api.OrganizationsUpdateWithResponse(ctx, orgID, adminapi.OrganizationsUpdateJSONRequestBody{
+		Name:     request.Name,
+		Metadata: anyMapPtr(request.Metadata),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	org, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
-
-	var org Organization
-	if err := decodeResponse(resp, &org); err != nil {
-		return nil, err
-	}
-
-	return &org, nil
+	return toOrganization(org)
 }
 
 func (c *adminClientImpl) DeleteOrganization(ctx context.Context, orgID string) error {
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/admin/organizations/%s", orgID), nil)
+	resp, err := c.api.OrganizationsDeleteWithResponse(ctx, orgID)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	deleted, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return err
 	}
-
-	var deleteOrgResp deleteOrganizationResponse
-	if err := decodeResponse(resp, &deleteOrgResp); err != nil {
-		return err
-	}
-	if !deleteOrgResp.Success {
+	if !deleted.Success {
 		return fmt.Errorf("failed to delete organization with ID %s", orgID)
 	}
-
 	return nil
 }
 
 func (c *adminClientImpl) GetOrganizationApiKey(ctx context.Context, orgID string, apiKeyID string) (*OrganizationApiKey, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, fmt.Sprintf("api/admin/organizations/%s/apiKeys", orgID), nil)
+	resp, err := c.api.OrganizationsGetAPIKeysWithResponse(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
-
-	var listOrgApiKeysResp listOrganizationApiKeysResponse
-	if err := decodeResponse(resp, &listOrgApiKeysResp); err != nil {
-		return nil, err
-	}
-	for _, key := range listOrgApiKeysResp.ApiKeys {
+	for _, key := range list.APIKeys {
 		if key.ID == apiKeyID {
-			return &key, nil
+			return &OrganizationApiKey{ID: key.ID, PublicKey: key.PublicKey}, nil
 		}
 	}
 
@@ -164,47 +160,28 @@ func (c *adminClientImpl) GetOrganizationApiKey(ctx context.Context, orgID strin
 }
 
 func (c *adminClientImpl) CreateOrganizationApiKey(ctx context.Context, orgID string) (*OrganizationApiKey, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPost, fmt.Sprintf("api/admin/organizations/%s/apiKeys", orgID), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var apiKey OrganizationApiKey
-	if err := decodeResponse(resp, &apiKey); err != nil {
-		return nil, err
-	}
-
-	return &apiKey, nil
-}
-
-func (c *adminClientImpl) DeleteOrganizationApiKey(ctx context.Context, orgID string, apiKeyID string) error {
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/admin/organizations/%s/apiKeys/%s", orgID, apiKeyID), nil)
-	if err != nil {
-		return err
-	}
-
-	var deleteOrgApiKeyResp deleteOrganizationApiKeyResponse
-	if err := decodeResponse(resp, &deleteOrgApiKeyResp); err != nil {
-		return err
-	}
-	if !deleteOrgApiKeyResp.Success {
-		return fmt.Errorf("failed to delete API key with ID %s in organization %s", apiKeyID, orgID)
-	}
-
-	return nil
-}
-
-func (c *adminClientImpl) makeRequest(ctx context.Context, method, apiPath string, body any) (*http.Response, error) {
-	req, err := buildBaseRequest(ctx, method, buildURL(c.host, apiPath), body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.api.OrganizationsCreateAPIKeyWithResponse(ctx, orgID, adminapi.OrganizationsCreateAPIKeyJSONRequestBody{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
+	key, err := payload(resp, resp.JSON201)
+	if err != nil {
+		return nil, err
+	}
+	return &OrganizationApiKey{ID: key.ID, PublicKey: key.PublicKey, SecretKey: key.SecretKey}, nil
+}
 
-	return resp, nil
+func (c *adminClientImpl) DeleteOrganizationApiKey(ctx context.Context, orgID string, apiKeyID string) error {
+	resp, err := c.api.OrganizationsDeleteAPIKeyWithResponse(ctx, orgID, apiKeyID)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	deleted, err := payload(resp, resp.JSON200)
+	if err != nil {
+		return err
+	}
+	if !deleted.Success {
+		return fmt.Errorf("failed to delete API key with ID %s in organization %s", apiKeyID, orgID)
+	}
+	return nil
 }

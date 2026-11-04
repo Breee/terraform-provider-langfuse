@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,6 +17,11 @@ import (
 
 var _ resource.Resource = &organizationResource{}
 var _ resource.ResourceWithImportState = &organizationResource{}
+
+var (
+	orgDeleteRetryInterval = 2 * time.Second
+	orgDeleteRetryTimeout  = 15 * time.Minute
+)
 
 func NewOrganizationResource() resource.Resource {
 	return &organizationResource{}
@@ -211,19 +217,21 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	err := r.AdminClient.DeleteOrganization(ctx, data.ID.ValueString())
-	if err != nil {
-		// Handle the case where organization has existing projects
-		// This is common during test cleanup when dependencies aren't deleted in perfect order
-		if strings.Contains(err.Error(), "Cannot delete organization with existing projects") {
-			resp.Diagnostics.AddWarning(
-				"Organization deletion skipped",
-				"Organization still has existing projects. This is expected during test cleanup - "+
-					"the Docker environment cleanup will handle resource removal. Error: "+err.Error(),
-			)
-		} else {
-			resp.Diagnostics.AddError("Error deleting organization", err.Error())
+	// Langfuse deletes projects asynchronously and rejects the organization
+	// delete until that has finished, so retry for a while before giving up.
+	deadline := time.Now().Add(orgDeleteRetryTimeout)
+	for err != nil && strings.Contains(err.Error(), "Cannot delete organization with existing projects") && time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			resp.Diagnostics.AddError("Error deleting organization", ctx.Err().Error())
 			return
+		case <-time.After(orgDeleteRetryInterval):
 		}
+		err = r.AdminClient.DeleteOrganization(ctx, data.ID.ValueString())
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting organization", err.Error())
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &organizationResourceModel{

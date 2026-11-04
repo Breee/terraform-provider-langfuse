@@ -33,7 +33,16 @@ test-teardown:
 generate:
 	go generate ./...
 
-docs:
-	cd tools; go generate ./...
+# Regenerate API clients from the vendored OpenAPI specs and overlays in openapi/
+generate-api:
+	cd tools; go generate -run oapi-codegen ./...
 
-.PHONY: docs
+# Refresh the vendored OpenAPI specs from Langfuse Cloud
+update-openapi:
+	curl -fsSL https://cloud.langfuse.com/generated/api/openapi.yml -o openapi/langfuse.yml
+	curl -fsSL https://cloud.langfuse.com/generated/organizations-api/openapi.yml -o openapi/langfuse-organizations.yml
+
+docs:
+	cd tools; go generate -skip oapi-codegen ./...
+
+.PHONY: docs generate-api update-openapi

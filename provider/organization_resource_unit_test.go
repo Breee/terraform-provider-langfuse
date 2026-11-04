@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 
@@ -226,6 +228,52 @@ func TestOrganizationResourceCRUD(t *testing.T) {
 
 		if deleteResp.Diagnostics.HasError() {
 			t.Fatalf("unexpected diagnostics from Delete: %v", deleteResp.Diagnostics)
+		}
+	})
+
+	t.Run("DeleteRetriesWhileProjectsAreBeingDeleted", func(t *testing.T) {
+		orgDeleteRetryInterval = time.Millisecond
+		t.Cleanup(func() { orgDeleteRetryInterval = 2 * time.Second })
+
+		gomock.InOrder(
+			clientFactory.AdminClient.EXPECT().
+				DeleteOrganization(ctx, "org-123").
+				Return(errors.New(`request failed with status code 400, response body: {"error":"Cannot delete organization with existing projects"}`)),
+			clientFactory.AdminClient.EXPECT().
+				DeleteOrganization(ctx, "org-123").
+				Return(nil),
+		)
+
+		var deleteResp resource.DeleteResponse
+		deleteResp.State.Schema = resourceSchema
+
+		r.Delete(ctx, resource.DeleteRequest{State: updateResp.State}, &deleteResp)
+
+		if len(deleteResp.Diagnostics) != 0 {
+			t.Fatalf("expected no diagnostics after retry, got: %v", deleteResp.Diagnostics)
+		}
+	})
+
+	t.Run("DeleteFailsWhenProjectsOutliveRetryTimeout", func(t *testing.T) {
+		orgDeleteRetryInterval = time.Millisecond
+		orgDeleteRetryTimeout = 10 * time.Millisecond
+		t.Cleanup(func() {
+			orgDeleteRetryInterval = 2 * time.Second
+			orgDeleteRetryTimeout = 15 * time.Minute
+		})
+
+		clientFactory.AdminClient.EXPECT().
+			DeleteOrganization(ctx, "org-123").
+			Return(errors.New(`request failed with status code 400, response body: {"error":"Cannot delete organization with existing projects"}`)).
+			MinTimes(2)
+
+		var deleteResp resource.DeleteResponse
+		deleteResp.State.Schema = resourceSchema
+
+		r.Delete(ctx, resource.DeleteRequest{State: updateResp.State}, &deleteResp)
+
+		if !deleteResp.Diagnostics.HasError() {
+			t.Fatal("expected an error once the retry timeout is exceeded")
 		}
 	})
 

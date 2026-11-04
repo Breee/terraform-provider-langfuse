@@ -1,0 +1,32 @@
+overlay: 1.0.0
+info:
+  title: Langfuse organizations API corrections
+  version: 1.0.0
+# Each action aligns the spec with the status codes the Langfuse server actually returns
+# (verified against langfuse/langfuse web/src/pages/api/admin). Drop an action once upstream fixes it.
+actions:
+  - target: $.paths['/api/admin/organizations'].post.responses
+    description: Organization creation returns 201.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+  - target: $.paths['/api/admin/organizations'].post.responses['200']
+    remove: true
+  - target: $.paths['/api/admin/organizations/{organizationId}/apiKeys'].post.responses
+    description: Organization API key creation returns 201.
+    update:
+      '201':
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyResponse'
+  - target: $.paths['/api/admin/organizations/{organizationId}/apiKeys'].post.responses['200']
+    remove: true
+  - target: $.paths.*.*.responses['400','401','403','404','405'].content['application/json'].schema.type
+    description: Error responses are JSON objects like {"error":"..."}, not strings.
+    remove: true

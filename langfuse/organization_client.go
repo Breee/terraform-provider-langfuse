@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
+
+	"github.com/langfuse/terraform-provider-langfuse/langfuse/publicapi"
 )
 
 var (
@@ -44,23 +44,6 @@ type UpdateProjectRequest struct {
 	Metadata      map[string]string `json:"metadata,omitempty"`
 }
 
-type listProjectsResponse struct {
-	Projects []*Project `json:"projects"`
-}
-
-type listProjectApiKeysResponse struct {
-	ApiKeys []ProjectApiKey `json:"apiKeys"`
-}
-
-type deleteProjectResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type deleteProjectApiKeyResponse struct {
-	Success bool `json:"success"`
-}
-
 type OrganizationMembership struct {
 	ID       string `json:"id"`
 	Email    string `json:"email"`
@@ -96,15 +79,6 @@ type UpdateMembershipRequest struct {
 	Role   string `json:"role"`
 }
 
-type listMembershipsResponse struct {
-	Memberships []OrganizationMembership `json:"memberships"`
-}
-
-type removeMemberResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
 // Project Membership types
 type ProjectMembership struct {
 	UserID string `json:"userId"`
@@ -116,19 +90,6 @@ type ProjectMembership struct {
 type CreateProjectMembershipRequest struct {
 	UserID string `json:"userId"`
 	Role   string `json:"role"`
-}
-
-type DeleteProjectMembershipRequest struct {
-	UserID string `json:"userId"`
-}
-
-type deleteProjectMembershipResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type listProjectMembershipsResponse struct {
-	Memberships []ProjectMembership `json:"memberships"`
 }
 
 //go:generate mockgen -destination=./mocks/mock_organization_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse OrganizationClient
@@ -155,47 +116,58 @@ type OrganizationClient interface {
 }
 
 type organizationClientImpl struct {
-	host       string
-	publicKey  string
-	privateKey string
-	httpClient *http.Client
+	api *publicapi.ClientWithResponses
 }
 
 func NewOrganizationClient(host, publicKey, privateKey string) OrganizationClient {
-	return &organizationClientImpl{
-		host:       host,
-		publicKey:  publicKey,
-		privateKey: privateKey,
-		httpClient: &http.Client{},
+	return &organizationClientImpl{api: newPublicAPIClient(host, publicKey, privateKey)}
+}
+
+func toProject(id, name string, metadata map[string]any, retentionDays *int) (*Project, error) {
+	md, err := stringMap(metadata)
+	if err != nil {
+		return nil, err
 	}
+	proj := &Project{ID: id, Name: name, Metadata: md}
+	if retentionDays != nil {
+		proj.RetentionDays = int32(*retentionDays)
+	}
+	return proj, nil
 }
 
 func (c *organizationClientImpl) ListProjects(ctx context.Context) ([]*Project, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, "api/public/organizations/projects", nil)
+	resp, err := c.api.OrganizationsGetOrganizationProjectsWithResponse(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
 
-	var listProjResp listProjectsResponse
-	if err := decodeResponse(resp, &listProjResp); err != nil {
-		return nil, err
+	projects := make([]*Project, 0, len(list.Projects))
+	for _, p := range list.Projects {
+		var metadata map[string]any
+		if p.Metadata != nil {
+			metadata = *p.Metadata
+		}
+		// This endpoint does not return retentionDays.
+		proj, err := toProject(p.ID, p.Name, metadata, nil)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, proj)
 	}
-
-	return listProjResp.Projects, nil
+	return projects, nil
 }
 
 func (c *organizationClientImpl) GetProject(ctx context.Context, projectID string) (*Project, error) {
 	// Note: this endpoint does not return `retentionDays`, so the returned value will always be 0
-	resp, err := c.makeRequest(ctx, http.MethodGet, "api/public/organizations/projects", nil)
+	projects, err := c.ListProjects(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	var listProjResp listProjectsResponse
-	if err := decodeResponse(resp, &listProjResp); err != nil {
-		return nil, err
-	}
-	for _, proj := range listProjResp.Projects {
+	for _, proj := range projects {
 		if proj.ID == projectID {
 			return proj, nil
 		}
@@ -204,63 +176,65 @@ func (c *organizationClientImpl) GetProject(ctx context.Context, projectID strin
 }
 
 func (c *organizationClientImpl) CreateProject(ctx context.Context, request *CreateProjectRequest) (*Project, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPost, "api/public/projects", request)
+	resp, err := c.api.ProjectsCreateWithResponse(ctx, publicapi.ProjectsCreateJSONRequestBody{
+		Name:      request.Name,
+		Retention: int(request.RetentionDays),
+		Metadata:  anyMapPtr(request.Metadata),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	proj, err := payload(resp, resp.JSON201)
 	if err != nil {
 		return nil, err
 	}
-
-	var proj Project
-	if err := decodeResponse(resp, &proj); err != nil {
-		return nil, err
-	}
-
-	return &proj, nil
+	return toProject(proj.ID, proj.Name, proj.Metadata, proj.RetentionDays)
 }
 
 func (c *organizationClientImpl) UpdateProject(ctx context.Context, projectID string, request *UpdateProjectRequest) (*Project, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPut, fmt.Sprintf("api/public/projects/%s", projectID), request)
+	retention := int(request.RetentionDays)
+	resp, err := c.api.ProjectsUpdateWithResponse(ctx, projectID, publicapi.ProjectsUpdateJSONRequestBody{
+		Name:      request.Name,
+		Retention: &retention,
+		Metadata:  anyMapPtr(request.Metadata),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	proj, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
-
-	var proj Project
-	if err := decodeResponse(resp, &proj); err != nil {
-		return nil, err
-	}
-
-	return &proj, nil
+	return toProject(proj.ID, proj.Name, proj.Metadata, proj.RetentionDays)
 }
 
 func (c *organizationClientImpl) DeleteProject(ctx context.Context, projectID string) error {
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/public/projects/%s", projectID), nil)
+	resp, err := c.api.ProjectsDeleteWithResponse(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	deleted, err := payload(resp, resp.JSON202)
 	if err != nil {
 		return err
 	}
-
-	var deleteProjResp deleteProjectResponse
-	if err := decodeResponse(resp, &deleteProjResp); err != nil {
-		return err
+	if !deleted.Success {
+		return fmt.Errorf("failed to delete project with ID %s: %s", projectID, deleted.Message)
 	}
-	if !deleteProjResp.Success {
-		return fmt.Errorf("failed to delete project with ID %s: %s", projectID, deleteProjResp.Message)
-	}
-
 	return nil
 }
 
 func (c *organizationClientImpl) GetProjectApiKey(ctx context.Context, projectID string, apiKeyID string) (*ProjectApiKey, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, fmt.Sprintf("api/public/projects/%s/apiKeys", projectID), nil)
+	resp, err := c.api.ProjectsGetAPIKeysWithResponse(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
-
-	var listProjApiKeysResp listProjectApiKeysResponse
-	if err := decodeResponse(resp, &listProjApiKeysResp); err != nil {
-		return nil, err
-	}
-	for _, key := range listProjApiKeysResp.ApiKeys {
+	for _, key := range list.APIKeys {
 		if key.ID == apiKeyID {
-			return &key, nil
+			return &ProjectApiKey{ID: key.ID, PublicKey: key.PublicKey, Note: key.Note}, nil
 		}
 	}
 
@@ -268,51 +242,51 @@ func (c *organizationClientImpl) GetProjectApiKey(ctx context.Context, projectID
 }
 
 func (c *organizationClientImpl) CreateProjectApiKey(ctx context.Context, projectID string, request *CreateProjectApiKeyRequest) (*ProjectApiKey, error) {
-	var body any = struct{}{}
+	var body publicapi.ProjectsCreateAPIKeyJSONRequestBody
 	if request != nil {
-		body = request
+		body.Note = request.Note
 	}
-	resp, err := c.makeRequest(ctx, http.MethodPost, fmt.Sprintf("api/public/projects/%s/apiKeys", projectID), body)
+	resp, err := c.api.ProjectsCreateAPIKeyWithResponse(ctx, projectID, body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	key, err := payload(resp, resp.JSON201)
 	if err != nil {
 		return nil, err
 	}
-	var apiKey ProjectApiKey
-	if err := decodeResponse(resp, &apiKey); err != nil {
-		return nil, err
-	}
-
-	return &apiKey, nil
+	return &ProjectApiKey{ID: key.ID, PublicKey: key.PublicKey, SecretKey: key.SecretKey, Note: key.Note}, nil
 }
 
 func (c *organizationClientImpl) DeleteProjectApiKey(ctx context.Context, projectID string, apiKeyID string) error {
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/public/projects/%s/apiKeys/%s", projectID, apiKeyID), nil)
+	resp, err := c.api.ProjectsDeleteAPIKeyWithResponse(ctx, projectID, apiKeyID)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	deleted, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return err
 	}
-
-	var deleteProjApiKeyResp deleteProjectApiKeyResponse
-	if err := decodeResponse(resp, &deleteProjApiKeyResp); err != nil {
-		return err
-	}
-	if !deleteProjApiKeyResp.Success {
+	if !deleted.Success {
 		return fmt.Errorf("failed to delete API key with ID %s in project %s", apiKeyID, projectID)
 	}
-
 	return nil
 }
 
 func (c *organizationClientImpl) ListMemberships(ctx context.Context) ([]OrganizationMembership, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, "api/public/organizations/memberships", nil)
+	resp, err := c.api.OrganizationsGetOrganizationMembershipsWithResponse(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
 
-	var listMembershipsResp listMembershipsResponse
-	if err := decodeResponse(resp, &listMembershipsResp); err != nil {
-		return nil, err
+	memberships := make([]OrganizationMembership, 0, len(list.Memberships))
+	for _, m := range list.Memberships {
+		memberships = append(memberships, OrganizationMembership{UserID: m.UserID, Email: m.Email, Role: string(m.Role)})
 	}
-
-	return listMembershipsResp.Memberships, nil
+	return memberships, nil
 }
 
 func (c *organizationClientImpl) GetMembership(ctx context.Context, membershipID string) (*OrganizationMembership, error) {
@@ -344,88 +318,90 @@ func (c *organizationClientImpl) UpdateMembership(ctx context.Context, membershi
 		userIDToUpdate = currentMembership.UserID
 	}
 
-	updateRequest := UpdateMembershipRequest{
+	resp, err := c.api.OrganizationsUpdateOrganizationMembershipWithResponse(ctx, publicapi.MembershipRequest{
 		UserID: userIDToUpdate,
-		Role:   request.Role,
-	}
-
-	resp, err := c.makeRequest(ctx, http.MethodPut, "api/public/organizations/memberships", updateRequest)
+		Role:   publicapi.MembershipRole(request.Role),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update membership: %w", err)
 	}
-
-	var updatedMembership OrganizationMembership
-	if err := decodeResponse(resp, &updatedMembership); err != nil {
-		return nil, fmt.Errorf("failed to decode membership response: %w", err)
+	updated, err := payload(resp, resp.JSON200)
+	if err != nil {
+		return nil, err
 	}
 
-	// The PUT response may not include the membership ID, so preserve it from the original request
-	if updatedMembership.ID == "" {
-		updatedMembership.ID = membershipID
-	}
-
-	return &updatedMembership, nil
+	// The PUT response has no membership ID, so preserve it from the original request
+	return &OrganizationMembership{
+		ID:     membershipID,
+		UserID: updated.UserID,
+		Email:  updated.Email,
+		Role:   string(updated.Role),
+	}, nil
 }
 
 func (c *organizationClientImpl) RemoveMember(ctx context.Context, membershipID string) error {
-	// DELETE endpoint requires userId in the request body
-	deleteRequest := struct {
-		UserID string `json:"userId"`
-	}{
-		UserID: membershipID,
-	}
-
-	resp, err := c.makeRequest(ctx, http.MethodDelete, "api/public/organizations/memberships", deleteRequest)
+	resp, err := c.api.OrganizationsDeleteOrganizationMembershipWithResponse(ctx, publicapi.DeleteMembershipRequest{UserID: membershipID})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to make request: %w", err)
 	}
-
-	var removeMemberResp removeMemberResponse
-	if err := decodeResponse(resp, &removeMemberResp); err != nil {
-		return err
-	}
-
-	// API returns success: false but with a success message, so we check the message too
-	if !removeMemberResp.Success && !strings.Contains(strings.ToLower(removeMemberResp.Message), "deleted") && !strings.Contains(strings.ToLower(removeMemberResp.Message), "removed") {
-		return fmt.Errorf("failed to remove member with ID %s: %s", membershipID, removeMemberResp.Message)
-	}
-
-	return nil
+	_, err = payload(resp, resp.JSON200)
+	return err
 }
 
 func (c *organizationClientImpl) CreateSCIMUser(ctx context.Context, request *SCIMUserRequest) (*SCIMUserResponse, error) {
-	// Ensure Active is true if not explicitly set
-	if !request.Active {
-		request.Active = true
+	active := true
+	body := publicapi.ScimCreateUserJSONRequestBody{UserName: request.UserName, Active: &active}
+	if request.Password != "" {
+		body.Password = &request.Password
+	}
+	if len(request.Emails) > 0 {
+		emails := make([]publicapi.ScimEmail, 0, len(request.Emails))
+		for _, e := range request.Emails {
+			emails = append(emails, publicapi.ScimEmail{Value: e.Value, Primary: e.Primary})
+		}
+		body.Emails = &emails
 	}
 
-	resp, err := c.makeRequest(ctx, http.MethodPost, "api/public/scim/Users", request)
+	resp, err := c.api.ScimCreateUserWithResponse(ctx, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SCIM user: %w", err)
 	}
-
-	var scimUser SCIMUserResponse
-	if err := decodeResponse(resp, &scimUser); err != nil {
-		return nil, fmt.Errorf("failed to decode SCIM user response: %w", err)
+	user, err := payload(resp, resp.JSON201)
+	if err != nil {
+		return nil, err
 	}
 
-	return &scimUser, nil
+	scimUser := &SCIMUserResponse{ID: user.ID, UserName: user.UserName}
+	for _, e := range user.Emails {
+		scimUser.Emails = append(scimUser.Emails, struct {
+			Value   string `json:"value"`
+			Primary bool   `json:"primary"`
+		}{Value: e.Value, Primary: e.Primary})
+	}
+	return scimUser, nil
 }
 
 // Project membership methods
 
+func toProjectMembership(m *publicapi.MembershipResponse) ProjectMembership {
+	return ProjectMembership{UserID: m.UserID, Role: string(m.Role), Email: m.Email, Name: m.Name}
+}
+
 func (c *organizationClientImpl) ListProjectMemberships(ctx context.Context, projectID string) ([]ProjectMembership, error) {
-	resp, err := c.makeRequest(ctx, http.MethodGet, fmt.Sprintf("api/public/projects/%s/memberships", projectID), nil)
+	resp, err := c.api.OrganizationsGetProjectMembershipsWithResponse(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	list, err := payload(resp, resp.JSON200)
 	if err != nil {
 		return nil, err
 	}
 
-	var listResp listProjectMembershipsResponse
-	if err := decodeResponse(resp, &listResp); err != nil {
-		return nil, err
+	memberships := make([]ProjectMembership, 0, len(list.Memberships))
+	for i := range list.Memberships {
+		memberships = append(memberships, toProjectMembership(&list.Memberships[i]))
 	}
-
-	return listResp.Memberships, nil
+	return memberships, nil
 }
 
 func (c *organizationClientImpl) GetProjectMembership(ctx context.Context, projectID, membershipID string) (*ProjectMembership, error) {
@@ -444,52 +420,26 @@ func (c *organizationClientImpl) GetProjectMembership(ctx context.Context, proje
 }
 
 func (c *organizationClientImpl) CreateOrUpdateProjectMembership(ctx context.Context, projectID string, request *CreateProjectMembershipRequest) (*ProjectMembership, error) {
-	resp, err := c.makeRequest(ctx, http.MethodPut, fmt.Sprintf("api/public/projects/%s/memberships", projectID), request)
+	resp, err := c.api.OrganizationsUpdateProjectMembershipWithResponse(ctx, projectID, publicapi.MembershipRequest{
+		UserID: request.UserID,
+		Role:   publicapi.MembershipRole(request.Role),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create/update project membership: %w", err)
 	}
-
-	var membership ProjectMembership
-	if err := decodeResponse(resp, &membership); err != nil {
+	updated, err := payload(resp, resp.JSON200)
+	if err != nil {
 		return nil, err
 	}
-
+	membership := toProjectMembership(updated)
 	return &membership, nil
 }
 
 func (c *organizationClientImpl) DeleteProjectMembership(ctx context.Context, projectID, userID string) error {
-	deleteRequest := DeleteProjectMembershipRequest{
-		UserID: userID,
-	}
-
-	resp, err := c.makeRequest(ctx, http.MethodDelete, fmt.Sprintf("api/public/projects/%s/memberships", projectID), deleteRequest)
+	resp, err := c.api.OrganizationsDeleteProjectMembershipWithResponse(ctx, projectID, publicapi.DeleteMembershipRequest{UserID: userID})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to make request: %w", err)
 	}
-
-	var deleteResp deleteProjectMembershipResponse
-	if err := decodeResponse(resp, &deleteResp); err != nil {
-		return err
-	}
-	// API returns success: false but with a success message, so we check the message too
-	if !deleteResp.Success && !strings.Contains(strings.ToLower(deleteResp.Message), "deleted") && !strings.Contains(strings.ToLower(deleteResp.Message), "removed") {
-		return fmt.Errorf("failed to remove project member %s from project %s: %s", userID, projectID, deleteResp.Message)
-	}
-
-	return nil
-}
-
-func (c *organizationClientImpl) makeRequest(ctx context.Context, methodType, apiPath string, body any) (*http.Response, error) {
-	req, err := buildBaseRequest(ctx, methodType, buildURL(c.host, apiPath), body)
-	if err != nil {
-		return nil, err
-	}
-	req.SetBasicAuth(c.publicKey, c.privateKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
-	}
-
-	return resp, nil
+	_, err = payload(resp, resp.JSON200)
+	return err
 }
