@@ -42,7 +42,7 @@ For development and testing:
 
 ```bash
 # Clone the repository
-git clone https://github.com/langfuse/terraform-provider-langfuse
+git clone https://github.com/Breee/terraform-provider-langfuse
 cd terraform-provider-langfuse
 
 # Build the provider
@@ -425,7 +425,7 @@ resource "langfuse_llm_connection" "my_gateway" {
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/langfuse/terraform-provider-langfuse
+   git clone https://github.com/Breee/terraform-provider-langfuse
    cd terraform-provider-langfuse
    ```
 
