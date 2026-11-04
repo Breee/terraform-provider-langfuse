@@ -1,0 +1,33 @@
+# Langfuse Terraform Provider
+
+This repository contains the Langfuse provider for Terraform and OpenTofu.
+Generated Go clients are built from vendored Langfuse OpenAPI specifications;
+Terraform resource schemas and lifecycle behavior are currently maintained by
+hand for compatibility.
+
+## Start here
+
+- [README](README.md): install, configure, and use the provider.
+- [Development guide](CONTRIBUTING.md): prerequisites, commands, and API client workflow.
+- [Testing guide](TESTING.md): unit and acceptance test setup and requirements.
+- [Agent instructions](AGENTS.md): concise repository rules for coding agents.
+- [Provider documentation](docs/index.md): generated resource documentation.
+
+## Architecture and generation
+
+- [OpenAPI generation assessment](ai-docs/openapi-provider-generation.md): generator options and migration constraints.
+- [OpenAPI sprint notes](ai-docs/sprint-1/README.md): generated-client implementation status and backlog.
+- [Vendored public API spec](openapi/langfuse.yml)
+- [Vendored organizations API spec](openapi/langfuse-organizations.yml)
+- [Public API client generator config](langfuse/publicapi/oapi-codegen.yaml)
+- [Admin API client generator config](langfuse/adminapi/oapi-codegen.yaml)
+- [Generation directives](tools/openapi.go)
+
+## Key commands
+
+- `make build`
+- `make test`
+- `make generate-api`
+- `make check-generated`
+- `make docs`
+- `make testacc` (requires Docker and a Langfuse Enterprise test environment)

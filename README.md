@@ -16,8 +16,13 @@ Langfuse is an open-source LLM engineering platform that provides observability,
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.5
-- [Go](https://golang.org/doc/install) >= 1.24 (for development)
+- [Go](https://golang.org/doc/install) >= 1.24.2 (for development)
 - Enterprise license key (if managing organizations and organization api keys)
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test commands, generated
+client workflow, and development requirements.
 
 ## Installation
 

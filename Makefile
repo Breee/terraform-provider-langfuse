@@ -37,6 +37,11 @@ generate:
 generate-api:
 	cd tools; go generate -run oapi-codegen ./...
 
+# Regenerate API clients and fail if committed generated files are stale.
+check-generated: generate-api
+	@git diff HEAD --exit-code -- langfuse/adminapi/adminapi.gen.go langfuse/publicapi/publicapi.gen.go || \
+		(echo "Generated clients are stale. Run 'make generate-api' and commit the result."; exit 1)
+
 # Refresh the vendored OpenAPI specs from Langfuse Cloud
 update-openapi:
 	curl -fsSL https://cloud.langfuse.com/generated/api/openapi.yml -o openapi/langfuse.yml
@@ -45,4 +50,4 @@ update-openapi:
 docs:
 	cd tools; go generate -skip oapi-codegen ./...
 
-.PHONY: docs generate-api update-openapi
+.PHONY: docs generate-api check-generated update-openapi
