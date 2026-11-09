@@ -1,6 +1,6 @@
 module github.com/langfuse/terraform-provider-langfuse
 
-go 1.24.2
+go 1.27.3
 
 require (
 	github.com/golang/mock v1.6.0

@@ -6,3 +6,4 @@ testing/.env
 testing/.name_suffix
 testing/.terraformrc
 .work/
+dist/

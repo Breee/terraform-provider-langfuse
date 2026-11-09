@@ -1,4 +1,4 @@
-.PHONY: test testacc test-setup test-teardown
+.PHONY: build install test testacc test-all test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs
 
 build:
 	go build -v ./...
@@ -29,25 +29,45 @@ test-teardown:
 	@echo "Stopping Langfuse test environment..."
 	docker compose -f testdata/docker-compose.yml down -v
 
-# Generate mocks
+# Refresh API inputs, then regenerate everything, including under make -j.
 generate:
+	$(MAKE) update-openapi
+	$(MAKE) generate-local
+
+# Reproduce all outputs without refreshing the vendored specifications.
+generate-local:
+	$(MAKE) generate-go
+	$(MAKE) generate-api
+	$(MAKE) docs
+
+generate-go:
 	go generate ./...
 
 # Regenerate API clients from the vendored OpenAPI specs and overlays in openapi/
 generate-api:
-	cd tools; go generate -run oapi-codegen ./...
+	cd tools && go generate -run oapi-codegen ./...
 
-# Regenerate API clients and fail if committed generated files are stale.
-check-generated: generate-api
-	@git diff HEAD --exit-code -- langfuse/adminapi/adminapi.gen.go langfuse/publicapi/publicapi.gen.go || \
-		(echo "Generated clients are stale. Run 'make generate-api' and commit the result."; exit 1)
+# Regenerate every checked-in generated output and fail if any are stale.
+check-generated: generate-local
+	@git diff --exit-code -- langfuse/mocks langfuse/adminapi langfuse/publicapi docs examples || \
+		(echo "Generated files or examples are stale. Run 'make generate-local' and commit the result."; exit 1)
+	@test -z "$$(git ls-files --others --exclude-standard -- langfuse/mocks langfuse/adminapi langfuse/publicapi docs examples)" || \
+		(echo "Generation created untracked output. Review it and commit the result."; exit 1)
 
 # Refresh the vendored OpenAPI specs from Langfuse Cloud
 update-openapi:
-	curl -fsSL https://cloud.langfuse.com/generated/api/openapi.yml -o openapi/langfuse.yml
-	curl -fsSL https://cloud.langfuse.com/generated/organizations-api/openapi.yml -o openapi/langfuse-organizations.yml
+	@set -eu; \
+	tmpdir=$$(mktemp -d openapi/.download.XXXXXX); \
+	trap 'rm -f "$$tmpdir/langfuse.yml" "$$tmpdir/langfuse-organizations.yml"; rmdir "$$tmpdir"' EXIT; \
+	curl --fail --silent --show-error --location --retry 3 --connect-timeout 15 --max-time 120 \
+		https://cloud.langfuse.com/generated/api/openapi.yml -o "$$tmpdir/langfuse.yml"; \
+	curl --fail --silent --show-error --location --retry 3 --connect-timeout 15 --max-time 120 \
+		https://cloud.langfuse.com/generated/organizations-api/openapi.yml -o "$$tmpdir/langfuse-organizations.yml"; \
+	if ! test -s "$$tmpdir/langfuse.yml" || ! test -s "$$tmpdir/langfuse-organizations.yml"; then \
+		echo "An OpenAPI download was empty; vendored specifications were not changed." >&2; exit 1; \
+	fi; \
+	mv "$$tmpdir/langfuse.yml" openapi/langfuse.yml; \
+	mv "$$tmpdir/langfuse-organizations.yml" openapi/langfuse-organizations.yml
 
 docs:
-	cd tools; go generate -skip oapi-codegen ./...
-
-.PHONY: docs generate-api check-generated update-openapi
+	cd tools && go generate -skip oapi-codegen ./...

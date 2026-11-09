@@ -1,39 +1,105 @@
 # Terraform Provider release workflow.
 name: Release
 
-# This GitHub action creates a release when a tag that matches the pattern
-# "v*" (e.g. v0.1.0) is created.
 on:
   push:
     tags:
       - "v*"
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
 
 # Releases need permissions to read and write the repository contents.
 # GitHub considers creating releases and uploading assets as writing contents.
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  goreleaser:
+  validate:
+    name: Validate release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Allow goreleaser to access older tag information.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: "tools/go.mod"
+          cache: true
+          cache-dependency-path: tools/go.sum
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+      - name: Build and test
+        run: |
+          make build
+          make test
+          make check-generated
+      - name: Lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: latest
+
+  goreleaser:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
           fetch-depth: 0
+          persist-credentials: true
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: "go.mod"
           cache: false
+      - name: Check signing configuration
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
+            echo "Configure GPG_PRIVATE_KEY before creating release tags." >&2
+            exit 1
+          fi
+      - name: Create weekly patch tag
+        id: weekly_tag
+        if: github.event_name != 'push'
+        run: |
+          latest_tag="$(git tag --list 'v[0-9]*' --sort=-version:refname | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ { print; exit }')"
+          if [[ -z "$latest_tag" ]]; then
+            next_tag="v0.1.0"
+          else
+            if [[ ! "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "Latest tag '$latest_tag' is not a stable vMAJOR.MINOR.PATCH tag." >&2
+              exit 1
+            fi
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+            if [[ "$(git rev-list --count "${latest_tag}..HEAD")" == "0" ]]; then
+              echo "No commits since $latest_tag; skipping weekly release."
+              exit 0
+            fi
+            next_tag="v${major}.${minor}.$((patch + 1))"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next_tag" -m "$next_tag"
+          git push origin "$next_tag"
+          echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         id: import_gpg
+        if: github.event_name == 'push' || steps.weekly_tag.outputs.tag != ''
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        if: github.event_name == 'push' || steps.weekly_tag.outputs.tag != ''
         with:
           args: release --clean
         env:

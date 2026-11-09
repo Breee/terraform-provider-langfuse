@@ -1,6 +1,6 @@
 # 04 — Organization membership phantom attributes
 
-Status: todo (confirm with 01 first)
+Status: implemented
 
 ## Problem
 
@@ -16,18 +16,17 @@ falls back to `userId`.
 
 ## Scope
 
-1. Decide per attribute:
-   - `id`: keep, documented as the user ID (current effective behaviour).
-   - `status`, `username`: deprecate (framework `DeprecationMessage`), then
-     remove in the next major version.
-   - Consider adding `name` (returned by the API, not exposed today).
-2. Remove `ID`, `Status`, `Username` from `langfuse.OrganizationMembership`
-   once no longer read; regenerate mocks.
-3. Update `docs/resources/organization_membership.md` via `make docs`.
+1. Keep `id` as an alias of `user_id`, and document that behavior.
+2. Deprecate `status` and `username` while retaining their empty-string values
+   for existing state compatibility; remove them only in a future major version.
+3. Expose the API-provided `name` as a computed-only attribute.
+4. Regenerate `docs/resources/organization_membership.md` with `make docs`.
 
 ## Acceptance criteria
 
-- No attribute is documented that the API cannot provide.
-- Existing state upgrades without a diff (`status`/`username` empty → null or
-  deprecated no-op; add a state upgrader if the schema version changes).
-- Unit and acceptance tests updated.
+- Unsupported `status` and `username` are marked deprecated without changing
+  their empty-string state behavior.
+- `id` remains the user ID alias for new state; reads and updates preserve
+  non-user-ID values already stored in legacy state.
+- API-provided `name` is exposed as computed-only.
+- Unit tests cover the schema and state behavior; regenerate resource docs.

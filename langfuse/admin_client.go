@@ -29,7 +29,7 @@ type UpdateOrganizationRequest struct {
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
-//go:generate mockgen -destination=./mocks/mock_admin_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse AdminClient
+//go:generate go run github.com/golang/mock/mockgen -destination=./mocks/mock_admin_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse AdminClient
 
 type AdminClient interface {
 	ListOrganizations(ctx context.Context) ([]*Organization, error)

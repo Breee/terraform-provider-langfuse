@@ -85,21 +85,38 @@ type APIKeyList struct {
 type APIKeyResponse struct {
 	CreatedAt        time.Time `json:"createdAt"`
 	DisplaySecretKey string    `json:"displaySecretKey"`
-	ID               string    `json:"id"`
-	Note             *string   `json:"note,omitempty"`
-	PublicKey        string    `json:"publicKey"`
-	SecretKey        string    `json:"secretKey"`
+
+	// ExpiresAt Expiration timestamp. Null if the key does not expire.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	ID        string     `json:"id"`
+
+	// Name Name of the API key. Contains the same value as note; null if no name was provided.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Contains the same value as name.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Note      *string `json:"note,omitempty"`
+	PublicKey string  `json:"publicKey"`
+	SecretKey string  `json:"secretKey"`
 }
 
 // APIKeySummary Summary of an API key
 type APIKeySummary struct {
-	CreatedAt        time.Time  `json:"createdAt"`
-	DisplaySecretKey string     `json:"displaySecretKey"`
-	ExpiresAt        *time.Time `json:"expiresAt,omitempty"`
-	ID               string     `json:"id"`
-	LastUsedAt       *time.Time `json:"lastUsedAt,omitempty"`
-	Note             *string    `json:"note,omitempty"`
-	PublicKey        string     `json:"publicKey"`
+	CreatedAt        time.Time `json:"createdAt"`
+	DisplaySecretKey string    `json:"displaySecretKey"`
+
+	// ExpiresAt Expiration timestamp. Null if the key does not expire.
+	ExpiresAt  *time.Time `json:"expiresAt,omitempty"`
+	ID         string     `json:"id"`
+	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+
+	// Name Name of the API key. Contains the same value as note; null if no name was provided.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Contains the same value as name.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Note      *string `json:"note,omitempty"`
+	PublicKey string  `json:"publicKey"`
 }
 
 // DeleteLlmConnectionResponse defines model for DeleteLlmConnectionResponse.
@@ -325,7 +342,14 @@ type ProjectsUpdateJSONBody struct {
 
 // ProjectsCreateAPIKeyJSONBody defines parameters for ProjectsCreateAPIKey.
 type ProjectsCreateAPIKeyJSONBody struct {
-	// Note Optional note for the API key
+	// ExpiresAt Optional expiration timestamp in ISO 8601 format. Must be in the future. Omit or set to null for a key that does not expire.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+
+	// Name Optional name for the API key. Cannot be provided together with note, even if either value is an empty string.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Cannot be provided together with name, even if either value is an empty string.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Note *string `json:"note,omitempty"`
 
 	// PublicKey Optional predefined public key. Must start with 'pk-lf-'. If provided, secretKey must also be provided.
@@ -345,6 +369,7 @@ type ScimCreateUserJSONBody struct {
 	Name   ScimName     `json:"name"`
 
 	// Password Ignored. Accepted only for compatibility with identity providers that always send a password on user creation (Okta sends a placeholder value even when password sync is disabled). No credential is created for the user; provisioned users authenticate via SSO or set a password themselves through the password reset flow.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Password *string `json:"password,omitempty"`
 
 	// UserName User's email address (required)
@@ -522,7 +547,7 @@ type ClientInterface interface {
 
 	// ProjectsDelete performs a DELETE /api/public/projects/{projectId} (the `ProjectsDelete` operationId) request.
 	//
-	// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously.
+	// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously. Deleting the AI Gateway ingestion project turns off the AI Gateway for the organization until another ingestion project is selected.
 	ProjectsDelete(ctx context.Context, projectID string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ProjectsUpdateWithBody performs a PUT /api/public/projects/{projectId} (the `ProjectsUpdate` operationId) request,
@@ -791,7 +816,7 @@ func (c *Client) ProjectsCreate(ctx context.Context, body ProjectsCreateJSONRequ
 
 // ProjectsDelete performs a DELETE /api/public/projects/{projectId} (the `ProjectsDelete` operationId) request.
 //
-// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously.
+// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously. Deleting the AI Gateway ingestion project turns off the AI Gateway for the organization until another ingestion project is selected.
 func (c *Client) ProjectsDelete(ctx context.Context, projectID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewProjectsDeleteRequest(c.Server, projectID)
 	if err != nil {
@@ -1824,7 +1849,7 @@ type ClientWithResponsesInterface interface {
 
 	// ProjectsDeleteWithResponse performs a DELETE /api/public/projects/{projectId} (the `ProjectsDelete` operationId) request.
 	//
-	// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously.
+	// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously. Deleting the AI Gateway ingestion project turns off the AI Gateway for the organization until another ingestion project is selected.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	ProjectsDeleteWithResponse(ctx context.Context, projectID string, reqEditors ...RequestEditorFn) (*ProjectsDeleteResponse, error)
@@ -3378,7 +3403,7 @@ func (c *ClientWithResponses) ProjectsCreateWithResponse(ctx context.Context, bo
 
 // ProjectsDeleteWithResponse performs a DELETE /api/public/projects/{projectId} (the `ProjectsDelete` operationId) request.
 //
-// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously.
+// Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously. Deleting the AI Gateway ingestion project turns off the AI Gateway for the organization until another ingestion project is selected.
 //
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) ProjectsDeleteWithResponse(ctx context.Context, projectID string, reqEditors ...RequestEditorFn) (*ProjectsDeleteResponse, error) {

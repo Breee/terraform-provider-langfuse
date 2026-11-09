@@ -16,6 +16,7 @@ hand for compatibility.
 ## Architecture and generation
 
 - [OpenAPI generation assessment](ai-docs/openapi-provider-generation.md): generator options and migration constraints.
+- [API generation workflow](ai-docs/API_GENERATION.md): all generated outputs, regeneration, and limitations.
 - [OpenAPI sprint notes](ai-docs/sprint-1/README.md): generated-client implementation status and backlog.
 - [Vendored public API spec](openapi/langfuse.yml)
 - [Vendored organizations API spec](openapi/langfuse-organizations.yml)
@@ -27,7 +28,10 @@ hand for compatibility.
 
 - `make build`
 - `make test`
-- `make generate-api`
+- `make generate` (refresh upstream specs and regenerate everything)
+- `make generate-local` (regenerate everything from vendored specs; no spec downloads)
 - `make check-generated`
 - `make docs`
 - `make testacc` (requires Docker and a Langfuse Enterprise test environment)
+- Weekly signed GitHub releases require `GPG_PRIVATE_KEY` and `PASSPHRASE` repository secrets.
+- Renovate groups updates by Go modules, GitHub Actions, container images, and Terraform.

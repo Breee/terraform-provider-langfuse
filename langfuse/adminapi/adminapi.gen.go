@@ -26,21 +26,38 @@ type APIKeyList struct {
 type APIKeyResponse struct {
 	CreatedAt        time.Time `json:"createdAt"`
 	DisplaySecretKey string    `json:"displaySecretKey"`
-	ID               string    `json:"id"`
-	Note             *string   `json:"note,omitempty"`
-	PublicKey        string    `json:"publicKey"`
-	SecretKey        string    `json:"secretKey"`
+
+	// ExpiresAt Expiration timestamp. Null if the key does not expire.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	ID        string     `json:"id"`
+
+	// Name Name of the API key. Contains the same value as note; null if no name was provided.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Contains the same value as name.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Note      *string `json:"note,omitempty"`
+	PublicKey string  `json:"publicKey"`
+	SecretKey string  `json:"secretKey"`
 }
 
 // APIKeySummary Summary of an API key
 type APIKeySummary struct {
-	CreatedAt        time.Time  `json:"createdAt"`
-	DisplaySecretKey string     `json:"displaySecretKey"`
-	ExpiresAt        *time.Time `json:"expiresAt,omitempty"`
-	ID               string     `json:"id"`
-	LastUsedAt       *time.Time `json:"lastUsedAt,omitempty"`
-	Note             *string    `json:"note,omitempty"`
-	PublicKey        string     `json:"publicKey"`
+	CreatedAt        time.Time `json:"createdAt"`
+	DisplaySecretKey string    `json:"displaySecretKey"`
+
+	// ExpiresAt Expiration timestamp. Null if the key does not expire.
+	ExpiresAt  *time.Time `json:"expiresAt,omitempty"`
+	ID         string     `json:"id"`
+	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+
+	// Name Name of the API key. Contains the same value as note; null if no name was provided.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Contains the same value as name.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Note      *string `json:"note,omitempty"`
+	PublicKey string  `json:"publicKey"`
 }
 
 // DeleteOrganizationResponse Response for successful organization deletion
@@ -75,6 +92,13 @@ type Organizations struct {
 	Organizations []Organization `json:"organizations"`
 }
 
+// TransferProjectResponse Response for a project transfer
+type TransferProjectResponse struct {
+	// OrganizationID ID of the organization the project belongs to after the transfer
+	OrganizationID string `json:"organizationId"`
+	ProjectID      string `json:"projectId"`
+}
+
 // OrganizationsCreateJSONBody defines parameters for OrganizationsCreate.
 type OrganizationsCreateJSONBody struct {
 	// Metadata Optional metadata for the organization
@@ -91,8 +115,21 @@ type OrganizationsUpdateJSONBody struct {
 
 // OrganizationsCreateAPIKeyJSONBody defines parameters for OrganizationsCreateAPIKey.
 type OrganizationsCreateAPIKeyJSONBody struct {
-	// Note Optional note for the API key
+	// ExpiresAt Optional expiration timestamp in ISO 8601 format. Must be in the future. Omit or set to null for a key that does not expire.
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+
+	// Name Optional name for the API key. Cannot be provided together with note, even if either value is an empty string.
+	Name *string `json:"name,omitempty"`
+
+	// Note Deprecated alias for name. Cannot be provided together with name, even if either value is an empty string.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Note *string `json:"note,omitempty"`
+}
+
+// OrganizationsTransferProjectJSONBody defines parameters for OrganizationsTransferProject.
+type OrganizationsTransferProjectJSONBody struct {
+	// TargetOrganizationID ID of the organization to move the project into
+	TargetOrganizationID string `json:"targetOrganizationId"`
 }
 
 // OrganizationsCreateJSONRequestBody defines body for OrganizationsCreate for application/json ContentType.
@@ -103,6 +140,9 @@ type OrganizationsUpdateJSONRequestBody OrganizationsUpdateJSONBody
 
 // OrganizationsCreateAPIKeyJSONRequestBody defines body for OrganizationsCreateAPIKey for application/json ContentType.
 type OrganizationsCreateAPIKeyJSONRequestBody OrganizationsCreateAPIKeyJSONBody
+
+// OrganizationsTransferProjectJSONRequestBody defines body for OrganizationsTransferProject for application/json ContentType.
+type OrganizationsTransferProjectJSONRequestBody OrganizationsTransferProjectJSONBody
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -238,6 +278,22 @@ type ClientInterface interface {
 	//
 	// Delete an API key for an organization.
 	OrganizationsDeleteAPIKey(ctx context.Context, organizationID string, apiKeyID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// OrganizationsTransferProjectWithBody performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+	//
+	// Transferring a project to the organization it already belongs to is a no-op.
+	OrganizationsTransferProjectWithBody(ctx context.Context, projectID string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// OrganizationsTransferProject performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request.
+	// Takes a body of the `application/json` content type.
+	//
+	// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+	//
+	// Transferring a project to the organization it already belongs to is a no-op.
+	OrganizationsTransferProject(ctx context.Context, projectID string, body OrganizationsTransferProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // OrganizationsGetAll performs a GET /api/admin/organizations (the `OrganizationsGetAll` operationId) request.
@@ -401,6 +457,42 @@ func (c *Client) OrganizationsCreateAPIKey(ctx context.Context, organizationID s
 // Delete an API key for an organization.
 func (c *Client) OrganizationsDeleteAPIKey(ctx context.Context, organizationID string, apiKeyID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewOrganizationsDeleteAPIKeyRequest(c.Server, organizationID, apiKeyID)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// OrganizationsTransferProjectWithBody performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request,
+// with any type of body and a specified content type.
+//
+// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+//
+// Transferring a project to the organization it already belongs to is a no-op.
+func (c *Client) OrganizationsTransferProjectWithBody(ctx context.Context, projectID string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewOrganizationsTransferProjectRequestWithBody(c.Server, projectID, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// OrganizationsTransferProject performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request.
+// Takes a body of the `application/json` content type.
+//
+// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+//
+// Transferring a project to the organization it already belongs to is a no-op.
+func (c *Client) OrganizationsTransferProject(ctx context.Context, projectID string, body OrganizationsTransferProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewOrganizationsTransferProjectRequest(c.Server, projectID, body)
 	if err != nil {
 		return nil, err
 	}
@@ -715,6 +807,53 @@ func NewOrganizationsDeleteAPIKeyRequest(server string, organizationID string, a
 	return req, nil
 }
 
+// NewOrganizationsTransferProjectRequest calls the generic OrganizationsTransferProject builder with application/json body
+func NewOrganizationsTransferProjectRequest(server string, projectID string, body OrganizationsTransferProjectJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewOrganizationsTransferProjectRequestWithBody(server, projectID, "application/json", bodyReader)
+}
+
+// NewOrganizationsTransferProjectRequestWithBody constructs an http.Request for the OrganizationsTransferProject method, with any body, and a specified content type
+func NewOrganizationsTransferProjectRequestWithBody(server string, projectID string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "projectId", projectID, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/admin/projects/%s/transfer", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -835,6 +974,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	OrganizationsDeleteAPIKeyWithResponse(ctx context.Context, organizationID string, apiKeyID string, reqEditors ...RequestEditorFn) (*OrganizationsDeleteAPIKeyResponse, error)
+
+	// OrganizationsTransferProjectWithBodyWithResponse performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request,
+	// with any type of body and a specified content type.
+	//
+	// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+	//
+	// Transferring a project to the organization it already belongs to is a no-op.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	OrganizationsTransferProjectWithBodyWithResponse(ctx context.Context, projectID string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationsTransferProjectResponse, error)
+
+	// OrganizationsTransferProjectWithResponse performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request.
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+	//
+	// Transferring a project to the organization it already belongs to is a no-op.
+	OrganizationsTransferProjectWithResponse(ctx context.Context, projectID string, body OrganizationsTransferProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationsTransferProjectResponse, error)
 }
 
 type OrganizationsGetAllResponse struct {
@@ -1389,6 +1546,75 @@ func (r OrganizationsDeleteAPIKeyResponse) ContentType() string {
 	return ""
 }
 
+type OrganizationsTransferProjectResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *TransferProjectResponse
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *interface{}
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *interface{}
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *interface{}
+	// JSON405 the response for an HTTP 405 `application/json` response
+	JSON405 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r OrganizationsTransferProjectResponse) GetJSON200() *TransferProjectResponse {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r OrganizationsTransferProjectResponse) GetJSON400() *interface{} {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r OrganizationsTransferProjectResponse) GetJSON401() *interface{} {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r OrganizationsTransferProjectResponse) GetJSON403() *interface{} {
+	return r.JSON403
+}
+
+// GetJSON405 returns the response for an HTTP 405 `application/json` response
+func (r OrganizationsTransferProjectResponse) GetJSON405() *interface{} {
+	return r.JSON405
+}
+
+// GetBody returns the raw response body bytes
+func (r OrganizationsTransferProjectResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r OrganizationsTransferProjectResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r OrganizationsTransferProjectResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r OrganizationsTransferProjectResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // OrganizationsGetAllWithResponse performs a GET /api/admin/organizations (the `OrganizationsGetAll` operationId) request.
 //
 // Get all organizations.
@@ -1530,6 +1756,36 @@ func (c *ClientWithResponses) OrganizationsDeleteAPIKeyWithResponse(ctx context.
 		return nil, err
 	}
 	return ParseOrganizationsDeleteAPIKeyResponse(rsp)
+}
+
+// OrganizationsTransferProjectWithBodyWithResponse performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request,
+// with any type of body and a specified content type.
+//
+// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+//
+// Transferring a project to the organization it already belongs to is a no-op.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) OrganizationsTransferProjectWithBodyWithResponse(ctx context.Context, projectID string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationsTransferProjectResponse, error) {
+	rsp, err := c.OrganizationsTransferProjectWithBody(ctx, projectID, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseOrganizationsTransferProjectResponse(rsp)
+}
+
+// OrganizationsTransferProjectWithResponse performs a POST /api/admin/projects/{projectId}/transfer (the `OrganizationsTransferProject` operationId) request.
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Transfer a project to another organization. The project keeps its data and its project-scoped API keys. Its project memberships and project-level user roles are removed, so members of the target organization get access through their organization role, and organization-scoped API keys of the source organization lose access.
+//
+// Transferring a project to the organization it already belongs to is a no-op.
+func (c *ClientWithResponses) OrganizationsTransferProjectWithResponse(ctx context.Context, projectID string, body OrganizationsTransferProjectJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationsTransferProjectResponse, error) {
+	rsp, err := c.OrganizationsTransferProject(ctx, projectID, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseOrganizationsTransferProjectResponse(rsp)
 }
 
 // ParseOrganizationsGetAllResponse parses an HTTP response from a OrganizationsGetAllWithResponse call
@@ -1926,6 +2182,60 @@ func ParseOrganizationsDeleteAPIKeyResponse(rsp *http.Response) (*OrganizationsD
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest DeleteOrganizationResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON405 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseOrganizationsTransferProjectResponse parses an HTTP response from a OrganizationsTransferProjectWithResponse call
+func ParseOrganizationsTransferProjectResponse(rsp *http.Response) (*OrganizationsTransferProjectResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &OrganizationsTransferProjectResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TransferProjectResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

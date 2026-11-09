@@ -16,7 +16,7 @@ Langfuse is an open-source LLM engineering platform that provides observability,
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.5
-- [Go](https://golang.org/doc/install) >= 1.24.2 (for development)
+- [Go](https://go.dev/dl/) >= 1.27.3 (for development)
 - Enterprise license key (if managing organizations and organization api keys)
 
 ## Development
@@ -26,9 +26,15 @@ client workflow, and development requirements.
 
 ## Installation
 
-### Terraform Registry (Recommended)
+### Registry publication (pending)
 
-Add the provider to your Terraform configuration:
+This fork is not yet published to the Terraform or OpenTofu registry. The
+`langfuse/langfuse` address in existing examples is the historical upstream
+address, not this fork. Use local development builds until the publishing
+namespace and registry listings are established; see
+[publication issue #4](https://github.com/Breee/terraform-provider-langfuse/issues/4).
+
+The existing example configuration is:
 
 ```hcl
 terraform {
@@ -219,10 +225,11 @@ Manages organization membership - invites users to organizations and manages the
 
 #### Attributes
 
-- `id` (String) - The unique identifier of the membership
+- `id` (String) - The user ID of the membership; existing imported IDs are preserved
 - `user_id` (String) - The unique identifier of the user
-- `status` (String) - The status of the membership (e.g., "ACTIVE")
-- `username` (String) - The username of the user
+- `name` (String) - The user's name returned by Langfuse
+- `status`, `username` (String, Deprecated) - Unsupported by the API; retained
+  as empty strings for state compatibility until a future major version
 
 #### Behavior
 
@@ -439,10 +446,14 @@ resource "langfuse_llm_connection" "my_gateway" {
    go mod download
    ```
 
-3. Generate mocks (for testing):
+3. Refresh API specs and regenerate clients, mocks, documentation, and examples:
    ```bash
    make generate
    ```
+
+   Use `make generate-local` to regenerate from the checked-in specs without
+   downloading upstream updates. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+   complete development workflow.
 
 ### Testing
 

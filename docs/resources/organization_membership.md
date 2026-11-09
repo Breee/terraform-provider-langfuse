@@ -109,7 +109,8 @@ output "viewer_membership_status" {
 
 ### Read-Only
 
-- `id` (String) The unique identifier of the membership.
-- `status` (String) The status of the membership invitation.
+- `id` (String) The user ID of the organization membership.
+- `name` (String) The name of the user, as returned by Langfuse.
+- `status` (String, Deprecated) Deprecated compatibility attribute. Langfuse does not return membership status; it remains an empty string for existing state compatibility.
 - `user_id` (String) The unique identifier of the user.
-- `username` (String) The username of the user.
+- `username` (String, Deprecated) Deprecated compatibility attribute. Langfuse does not return a membership username; it remains an empty string for existing state compatibility.

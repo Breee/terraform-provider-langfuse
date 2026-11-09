@@ -29,6 +29,7 @@ type organizationMembershipResourceModel struct {
 	Status                 types.String `tfsdk:"status"`
 	UserID                 types.String `tfsdk:"user_id"`
 	Username               types.String `tfsdk:"username"`
+	Name                   types.String `tfsdk:"name"`
 	OrganizationPublicKey  types.String `tfsdk:"organization_public_key"`
 	OrganizationPrivateKey types.String `tfsdk:"organization_private_key"`
 }
@@ -63,7 +64,7 @@ func (r *organizationMembershipResource) Schema(ctx context.Context, req resourc
 		Description: "Manages membership in a Langfuse organization.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "The unique identifier of the membership.",
+				Description: "The user ID of the organization membership.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -81,15 +82,21 @@ func (r *organizationMembershipResource) Schema(ctx context.Context, req resourc
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The status of the membership invitation.",
-				Computed:    true,
+				Description:        "Deprecated compatibility attribute. Langfuse does not return membership status; it remains an empty string for existing state compatibility.",
+				Computed:           true,
+				DeprecationMessage: "Langfuse does not return membership status. This attribute is deprecated and will be removed in a future major version.",
 			},
 			"user_id": schema.StringAttribute{
 				Description: "The unique identifier of the user.",
 				Computed:    true,
 			},
 			"username": schema.StringAttribute{
-				Description: "The username of the user.",
+				Description:        "Deprecated compatibility attribute. Langfuse does not return a membership username; it remains an empty string for existing state compatibility.",
+				Computed:           true,
+				DeprecationMessage: "Langfuse does not return a membership username. This attribute is deprecated and will be removed in a future major version.",
+			},
+			"name": schema.StringAttribute{
+				Description: "The name of the user, as returned by Langfuse.",
 				Computed:    true,
 			},
 			"organization_public_key": schema.StringAttribute{
@@ -216,18 +223,13 @@ func (r *organizationMembershipResource) Create(ctx context.Context, req resourc
 			return
 		}
 
-		// The API may not return membership ID, so use UserID as the resource ID
-		membershipID := membership.ID
-		if membershipID == "" {
-			membershipID = membership.UserID
-		}
-
-		plan.ID = types.StringValue(membershipID)
+		plan.ID = types.StringValue(membership.UserID)
 		plan.Email = types.StringValue(membership.Email)
 		plan.Role = types.StringValue(membership.Role)
 		plan.Status = types.StringValue(membership.Status)
 		plan.UserID = types.StringValue(membership.UserID)
 		plan.Username = types.StringValue(membership.Username)
+		plan.Name = types.StringValue(membership.Name)
 	} else {
 		// User already exists in organization, update their role
 		updateRequest := &langfuse.UpdateMembershipRequest{
@@ -241,18 +243,13 @@ func (r *organizationMembershipResource) Create(ctx context.Context, req resourc
 			return
 		}
 
-		// The API may not return membership ID, so use UserID as the resource ID
-		membershipID := membership.ID
-		if membershipID == "" {
-			membershipID = membership.UserID
-		}
-
-		plan.ID = types.StringValue(membershipID)
+		plan.ID = types.StringValue(membership.UserID)
 		plan.Email = types.StringValue(membership.Email)
 		plan.Role = types.StringValue(membership.Role)
 		plan.Status = types.StringValue(membership.Status)
 		plan.UserID = types.StringValue(membership.UserID)
 		plan.Username = types.StringValue(membership.Username)
+		plan.Name = types.StringValue(membership.Name)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
@@ -287,13 +284,8 @@ func (r *organizationMembershipResource) Read(ctx context.Context, req resource.
 	state.Status = types.StringValue(membership.Status)
 	state.UserID = types.StringValue(membership.UserID)
 	state.Username = types.StringValue(membership.Username)
-
-	// The API may not return membership ID, so use UserID as the resource ID
-	if membership.ID != "" {
-		state.ID = types.StringValue(membership.ID)
-	} else {
-		state.ID = types.StringValue(membership.UserID)
-	}
+	state.Name = types.StringValue(membership.Name)
+	state.ID = membershipResourceID(state.ID, membership.UserID)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -341,20 +333,23 @@ func (r *organizationMembershipResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	// The API may not return membership ID, so use UserID as the resource ID
-	membershipID := membership.ID
-	if membershipID == "" {
-		membershipID = membership.UserID
-	}
-
-	plan.ID = types.StringValue(membershipID)
+	plan.ID = membershipResourceID(state.ID, membership.UserID)
 	plan.Email = types.StringValue(membership.Email)
 	plan.Role = types.StringValue(membership.Role)
 	plan.Status = types.StringValue(membership.Status)
 	plan.UserID = types.StringValue(membership.UserID)
 	plan.Username = types.StringValue(membership.Username)
+	plan.Name = types.StringValue(membership.Name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
+}
+
+func membershipResourceID(currentID types.String, userID string) types.String {
+	if !currentID.IsNull() && !currentID.IsUnknown() && currentID.ValueString() != "" {
+		return currentID
+	}
+
+	return types.StringValue(userID)
 }
 
 func (r *organizationMembershipResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

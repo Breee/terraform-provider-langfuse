@@ -9,7 +9,7 @@ import (
 	"github.com/langfuse/terraform-provider-langfuse/langfuse/publicapi"
 )
 
-//go:generate mockgen -destination=./mocks/mock_llm_connections_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse LlmConnectionsClient
+//go:generate go run github.com/golang/mock/mockgen -destination=./mocks/mock_llm_connections_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse LlmConnectionsClient
 
 type LlmConnection struct {
 	ID                string         `json:"id"`

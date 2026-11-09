@@ -46,6 +46,7 @@ type UpdateProjectRequest struct {
 
 type OrganizationMembership struct {
 	ID       string `json:"id"`
+	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
 	Status   string `json:"status"`
@@ -92,7 +93,7 @@ type CreateProjectMembershipRequest struct {
 	Role   string `json:"role"`
 }
 
-//go:generate mockgen -destination=./mocks/mock_organization_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse OrganizationClient
+//go:generate go run github.com/golang/mock/mockgen -destination=./mocks/mock_organization_client.go -package=mocks github.com/langfuse/terraform-provider-langfuse/langfuse OrganizationClient
 
 type OrganizationClient interface {
 	ListProjects(ctx context.Context) ([]*Project, error)
@@ -284,7 +285,7 @@ func (c *organizationClientImpl) ListMemberships(ctx context.Context) ([]Organiz
 
 	memberships := make([]OrganizationMembership, 0, len(list.Memberships))
 	for _, m := range list.Memberships {
-		memberships = append(memberships, OrganizationMembership{UserID: m.UserID, Email: m.Email, Role: string(m.Role)})
+		memberships = append(memberships, OrganizationMembership{UserID: m.UserID, Email: m.Email, Role: string(m.Role), Name: m.Name})
 	}
 	return memberships, nil
 }
@@ -336,6 +337,7 @@ func (c *organizationClientImpl) UpdateMembership(ctx context.Context, membershi
 		UserID: updated.UserID,
 		Email:  updated.Email,
 		Role:   string(updated.Role),
+		Name:   updated.Name,
 	}, nil
 }
 

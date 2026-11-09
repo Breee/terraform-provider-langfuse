@@ -1,6 +1,6 @@
 # 03 — HTTP-level unit tests for the adapter layer
 
-Status: todo
+Status: implemented in `langfuse/http_clients_test.go`
 
 ## Problem
 

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranches": ["main"],
+  "labels": ["dependencies"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 5am on Monday"],
+  "prConcurrentLimit": 5,
+  "postUpdateOptions": ["gomodTidy"],
+  "packageRules": [
+    {
+      "description": "Group all Go modules, including tool modules and Go toolchain versions",
+      "matchManagers": ["gomod"],
+      "groupName": "Go dependencies"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Group container image updates",
+      "matchManagers": ["docker-compose", "dockerfile"],
+      "groupName": "Container images"
+    },
+    {
+      "description": "Group Terraform provider and module updates",
+      "matchManagers": ["terraform"],
+      "groupName": "Terraform dependencies"
+    },
+    {
+      "description": "Group Terraform CLI version updates",
+      "matchManagers": ["terraform-version"],
+      "groupName": "Terraform CLI"
+    }
+  ]
+}
