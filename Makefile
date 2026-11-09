@@ -1,4 +1,4 @@
-.PHONY: build install test testacc test-all test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs
+.PHONY: build install test testacc test-all test-prerequisites test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs
 
 build:
 	go build -v ./...
@@ -18,7 +18,15 @@ testacc: test-setup
 test-all: test testacc
 
 # Set up test environment
-test-setup:
+test-prerequisites:
+	@if [ -z "$$LANGFUSE_EE_LICENSE_KEY" ]; then \
+		echo "Acceptance tests require LANGFUSE_EE_LICENSE_KEY. Export the Enterprise test license before running 'make testacc'." >&2; \
+		exit 1; \
+	fi
+	docker compose version
+	docker info > /dev/null
+
+test-setup: test-prerequisites
 	@echo "Starting Langfuse test environment..."
 	docker compose -f testdata/docker-compose.yml up -d
 	@echo "Waiting for Langfuse to be ready..."

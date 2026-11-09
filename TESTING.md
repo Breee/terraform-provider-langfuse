@@ -61,6 +61,11 @@ Then run the tests using the Makefile:
 make testacc
 ```
 
+The command checks for the Enterprise license and a working Docker daemon
+before starting containers. It never loads credentials from `testing/.env` or
+targets the live instance used by local example configurations. Acceptance
+tests create and delete resources; only use an isolated test environment.
+
 This will:
 1. Start the Langfuse test environment using Docker Compose
 2. Wait for Langfuse to be healthy

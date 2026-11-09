@@ -284,13 +284,14 @@ func TestHTTPMembershipUpdate(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case "GET":
-			_, _ = w.Write([]byte(`{"memberships":[{"userId":"user","email":"user@example.com","role":"MEMBER","name":"User"}]}`))
+			_, _ = w.Write([]byte(`{"memberships":[{"userId":"other","email":"other@example.com","role":"VIEWER","name":"Other"},{"userId":"user","email":"user@example.com","role":"MEMBER","name":"User"}]}`))
 		case "PUT":
 			checkJSON(t, r, `{"userId":"user","role":"ADMIN"}`)
 			_, _ = w.Write([]byte(`{"userId":"user","email":"user@example.com","role":"ADMIN","name":"User"}`))
 		default:
 			t.Errorf("unexpected method %s", r.Method)
 		}
+
 	})
 	got, err := o.UpdateMembership(context.Background(), "user", &UpdateMembershipRequest{Role: "ADMIN"})
 	if err != nil {
@@ -298,6 +299,27 @@ func TestHTTPMembershipUpdate(t *testing.T) {
 	}
 	if calls != 2 || got.ID != "user" || got.UserID != "user" || got.Role != "ADMIN" || got.Name != "User" {
 		t.Errorf("membership = %#v; calls = %d", got, calls)
+	}
+}
+
+func TestHTTPMembershipIdentity(t *testing.T) {
+	_, o, _ := adapterServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"memberships":[{"userId":"other","email":"other@example.com","role":"VIEWER","name":"Other"},{"userId":"user","email":"user@example.com","role":"MEMBER","name":"User"}]}`))
+	})
+	list, err := o.ListMemberships(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 || list[0].ID != list[0].UserID || list[1].ID != "user" {
+		t.Fatalf("membership IDs = %#v", list)
+	}
+	got, err := o.GetMembership(context.Background(), list[1].ID)
+	if err != nil || got.UserID != "user" {
+		t.Fatalf("selected membership = %#v, %v", got, err)
+	}
+	if _, err := o.GetMembership(context.Background(), ""); !errors.Is(err, ErrMembershipNotFound) {
+		t.Fatalf("empty membership ID resolved to a user: %v", err)
 	}
 }
 

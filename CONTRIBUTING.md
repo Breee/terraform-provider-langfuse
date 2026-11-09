@@ -35,6 +35,7 @@ For changes that should not adopt upstream API updates, use
 Run `make build`, `make test`, `make generate-local`, and `golangci-lint run` before
 submitting changes. Stage expected generated outputs before running
 `make check-generated`; CI runs that drift check on a clean checkout.
+CI can also be triggered manually from the GitHub Actions page.
 Acceptance tests require a working Docker daemon
 and an Enterprise license configured for the test environment; see
 [`TESTING.md`](TESTING.md). Never commit credentials or Terraform state.

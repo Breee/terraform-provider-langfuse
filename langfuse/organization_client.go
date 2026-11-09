@@ -285,7 +285,7 @@ func (c *organizationClientImpl) ListMemberships(ctx context.Context) ([]Organiz
 
 	memberships := make([]OrganizationMembership, 0, len(list.Memberships))
 	for _, m := range list.Memberships {
-		memberships = append(memberships, OrganizationMembership{UserID: m.UserID, Email: m.Email, Role: string(m.Role), Name: m.Name})
+		memberships = append(memberships, OrganizationMembership{ID: m.UserID, UserID: m.UserID, Email: m.Email, Role: string(m.Role), Name: m.Name})
 	}
 	return memberships, nil
 }
