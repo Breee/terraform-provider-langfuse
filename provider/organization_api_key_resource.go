@@ -42,9 +42,13 @@ func (r *organizationApiKeyResource) Metadata(ctx context.Context, req resource.
 
 func (r *organizationApiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Create an organization-scoped API key using the provider's admin API key. Requires Langfuse Enterprise. " +
+			"Use this key for projects and memberships. Secret values are returned only at creation and are retained in Terraform state; use a secure state backend. " +
+			"Changing organization_id replaces the key. Import is not supported.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "The API key ID.",
 			},
 			"organization_id": schema.StringAttribute{
 				Required:    true,

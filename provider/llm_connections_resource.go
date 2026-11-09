@@ -72,7 +72,10 @@ func (r *llmConnectionsResource) Metadata(ctx context.Context, req resource.Meta
 
 func (r *llmConnectionsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages an LLM connection in a Langfuse project.",
+		Description: "Configure an LLM connection using project-scoped credentials. Langfuse upserts connections by provider_name; " +
+			"applying a name that already exists updates that connection. Changing provider_name replaces the resource. " +
+			"secret_key and extra_headers are write-only at the API and are retained in Terraform state; use a secure state backend. " +
+			"Import format: project_public_key:project_secret_key:connection_id. After import, supply secret_key and any extra_headers in configuration because the API cannot recover them.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

@@ -1,4 +1,4 @@
-.PHONY: build install test testacc test-all test-prerequisites test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs
+.PHONY: build install test testacc test-all test-prerequisites test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs validate-docs
 
 build:
 	go build -v ./...
@@ -79,3 +79,6 @@ update-openapi:
 
 docs:
 	cd tools && go generate -skip oapi-codegen ./...
+
+validate-docs:
+	cd tools && go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate --provider-dir .. --provider-name langfuse

@@ -51,9 +51,12 @@ func (r *organizationResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *organizationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Create and manage a Langfuse organization using the provider's admin API key. Requires Langfuse Enterprise. " +
+			"Remove the organization's projects before destroying it; Langfuse rejects deletion while projects remain. Import uses the organization ID.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "The organization ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

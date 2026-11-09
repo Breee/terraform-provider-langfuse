@@ -49,6 +49,10 @@ func (r *projectResource) Metadata(ctx context.Context, req resource.MetadataReq
 
 func (r *projectResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Create and manage a project using organization-scoped API credentials. " +
+			"Changing organization_id replaces the project. Project deletion is asynchronous. " +
+			"The read API does not return retention_days, so the provider preserves configured retention in state; imports initially use 0. " +
+			"Import format: project_id,organization_id,organization_public_key,organization_private_key. Import credentials are stored in state.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,

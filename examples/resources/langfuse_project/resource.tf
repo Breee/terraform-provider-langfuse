@@ -1,6 +1,24 @@
-resource "langfuse_project" "my_project" {
-  name                     = "My Project"
-  organization_id          = local.langfuse_organization_id
-  organization_private_key = local.langfuse_secret_key
-  organization_public_key  = local.langfuse_public_key
+variable "organization_id" {
+  type = string
+}
+
+variable "organization_public_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "organization_private_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "langfuse_project" "example" {
+  name                     = "Example Project"
+  organization_id          = var.organization_id
+  organization_public_key  = var.organization_public_key
+  organization_private_key = var.organization_private_key
+  retention_days           = 90
+  metadata = {
+    environment = "development"
+  }
 }

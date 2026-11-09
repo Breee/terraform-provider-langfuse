@@ -45,6 +45,9 @@ func (r *projectApiKeyResource) Metadata(ctx context.Context, req resource.Metad
 
 func (r *projectApiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Create a project-scoped API key using organization-scoped credentials. " +
+			"Secret values are returned only at creation and retained in Terraform state; use a secure state backend. " +
+			"Changing project_id or note replaces the key and its credentials. Import is not supported.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,

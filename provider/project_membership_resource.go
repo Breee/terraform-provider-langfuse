@@ -61,7 +61,9 @@ func (r *projectMembershipResource) Metadata(ctx context.Context, req resource.M
 
 func (r *projectMembershipResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages membership in a Langfuse project.",
+		Description: "Manage project membership using organization-scoped credentials. The user must already be a member of the organization. " +
+			"Destroy removes project membership, not the user or organization membership. " +
+			"Import format: project_id,user_id,organization_public_key,organization_private_key. Import credentials are stored in state.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the project membership.",

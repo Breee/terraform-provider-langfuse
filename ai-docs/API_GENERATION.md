@@ -7,11 +7,15 @@
 | `langfuse/mocks/*.go` | Interfaces and `go:generate` directives in `langfuse/` | `github.com/golang/mock/mockgen`, pinned by the root `go.mod` |
 | `langfuse/publicapi/publicapi.gen.go` | `openapi/langfuse.yml`, its overlay, and operation selection | `oapi-codegen` v2.8.0, configured in `langfuse/publicapi/oapi-codegen.yaml` |
 | `langfuse/adminapi/adminapi.gen.go` | `openapi/langfuse-organizations.yml` and its overlay | `oapi-codegen` v2.8.0, configured in `langfuse/adminapi/oapi-codegen.yaml` |
-| `docs/` | Provider schemas, descriptions, examples, and templates | `terraform-plugin-docs` from `tools/go.mod` |
+| `docs/` | Provider schemas/descriptions, `templates/index.md.tmpl`, `examples/provider/`, and `examples/resources/<resource_type>/` | `terraform-plugin-docs` from `tools/go.mod` |
 | `examples/*.tf` formatting | Terraform examples | `terraform fmt` |
 
 Generated files are committed. Edit their source inputs or generator
 configuration, not generated output.
+`resource.tf` supplies each resource example and `import.sh` supplies its import
+commands. The default generator templates render resource descriptions and all
+schema attributes. `make validate-docs` checks the rendered registry pages against
+the actual provider schema.
 
 ## Normal development flow
 

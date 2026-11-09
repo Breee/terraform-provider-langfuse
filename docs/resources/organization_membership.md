@@ -3,97 +3,35 @@
 page_title: "langfuse_organization_membership Resource - Langfuse"
 subcategory: ""
 description: |-
-  Manages membership in a Langfuse organization.
+  Manage a user's role in a Langfuse organization using organization-scoped credentials. The resource uses SCIM to create a user when necessary, which requires Enterprise support. Destroy removes organization membership, not the user account. Changing email or organization credentials replaces the resource. Import format: user_id,organization_public_key,organization_private_key. Import credentials are stored in state. status and username are deprecated compatibility attributes because the API does not return them.
 ---
 
 # langfuse_organization_membership (Resource)
 
-Manages membership in a Langfuse organization.
+Manage a user's role in a Langfuse organization using organization-scoped credentials. The resource uses SCIM to create a user when necessary, which requires Enterprise support. Destroy removes organization membership, not the user account. Changing email or organization credentials replaces the resource. Import format: user_id,organization_public_key,organization_private_key. Import credentials are stored in state. status and username are deprecated compatibility attributes because the API does not return them.
 
 ## Example Usage
 
 ```terraform
-# Organization membership management example
-
-terraform {
-  required_providers {
-    langfuse = {
-      source = "langfuse/langfuse"
-    }
-  }
+variable "member_email" {
+  type = string
 }
 
-provider "langfuse" {
-  # You can set the host if using a self-hosted instance
-  # host = "https://your-langfuse-instance.com"
-
-  # Admin API key for organization management
-  # Can also be set via LANGFUSE_ADMIN_KEY environment variable
-  # admin_api_key = "your-admin-api-key"
+variable "organization_public_key" {
+  type      = string
+  sensitive = true
 }
 
-# Create an organization
-resource "langfuse_organization" "example_org" {
-  name = "My Organization"
-  metadata = {
-    department = "engineering"
-    region     = "us-east-1"
-  }
+variable "organization_private_key" {
+  type      = string
+  sensitive = true
 }
 
-# Create an organization API key
-resource "langfuse_organization_api_key" "example_org_key" {
-  organization_id = langfuse_organization.example_org.id
-}
-
-# Invite a user to the organization as an admin
-resource "langfuse_organization_membership" "admin_user" {
-  email                    = "admin@example.com"
-  role                     = "ADMIN"
-  organization_public_key  = langfuse_organization_api_key.example_org_key.public_key
-  organization_private_key = langfuse_organization_api_key.example_org_key.secret_key
-}
-
-# Invite a user to the organization as a member
-resource "langfuse_organization_membership" "member_user" {
-  email                    = "member@example.com"
+resource "langfuse_organization_membership" "example" {
+  email                    = var.member_email
   role                     = "MEMBER"
-  organization_public_key  = langfuse_organization_api_key.example_org_key.public_key
-  organization_private_key = langfuse_organization_api_key.example_org_key.secret_key
-}
-
-# Invite a user to the organization as a viewer
-resource "langfuse_organization_membership" "viewer_user" {
-  email                    = "viewer@example.com"
-  role                     = "VIEWER"
-  organization_public_key  = langfuse_organization_api_key.example_org_key.public_key
-  organization_private_key = langfuse_organization_api_key.example_org_key.secret_key
-}
-
-# Outputs
-output "organization_id" {
-  description = "The ID of the created organization"
-  value       = langfuse_organization.example_org.id
-}
-
-output "admin_membership_id" {
-  description = "The ID of the admin user membership"
-  value       = langfuse_organization_membership.admin_user.id
-}
-
-output "admin_membership_status" {
-  description = "The status of the admin user membership"
-  value       = langfuse_organization_membership.admin_user.status
-}
-
-output "member_membership_status" {
-  description = "The status of the member user membership"
-  value       = langfuse_organization_membership.member_user.status
-}
-
-output "viewer_membership_status" {
-  description = "The status of the viewer user membership"
-  value       = langfuse_organization_membership.viewer_user.status
+  organization_public_key  = var.organization_public_key
+  organization_private_key = var.organization_private_key
 }
 ```
 
@@ -105,7 +43,7 @@ output "viewer_membership_status" {
 - `email` (String) The email address of the user to invite.
 - `organization_private_key` (String, Sensitive) Organization private key to authenticate the call.
 - `organization_public_key` (String, Sensitive) Organization public key to authenticate the call.
-- `role` (String) The role to assign to the user. Valid values are: ADMIN, MEMBER, VIEWER.
+- `role` (String) The role to assign to the user. Valid values are: OWNER, ADMIN, MEMBER, VIEWER, NONE.
 
 ### Read-Only
 
@@ -114,3 +52,15 @@ output "viewer_membership_status" {
 - `status` (String, Deprecated) Deprecated compatibility attribute. Langfuse does not return membership status; it remains an empty string for existing state compatibility.
 - `user_id` (String) The unique identifier of the user.
 - `username` (String, Deprecated) Deprecated compatibility attribute. Langfuse does not return a membership username; it remains an empty string for existing state compatibility.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Avoid putting literal credentials in shell history.
+# Legacy user-ID-only imports do not populate credentials; use this full format.
+terraform import langfuse_organization_membership.example "${USER_ID},${ORGANIZATION_PUBLIC_KEY},${ORGANIZATION_PRIVATE_KEY}"
+```

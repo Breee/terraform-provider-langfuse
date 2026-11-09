@@ -19,6 +19,7 @@
 | `make update-openapi` | Refresh upstream specs only, without regenerating outputs. |
 | `make generate-api` | Regenerate API clients only from the checked-in OpenAPI specs. |
 | `make docs` | Regenerate Terraform docs and format examples only. |
+| `make validate-docs` | Validate registry documentation against the provider schema. |
 | `make testacc` | Start the Docker test environment and run acceptance tests. |
 | `make test-teardown` | Stop the Docker test environment and remove its volumes. |
 
@@ -68,6 +69,20 @@ imports, secrets, and deletion behavior. See
 workflow and known limitations, and
 [`ai-docs/openapi-provider-generation.md`](ai-docs/openapi-provider-generation.md)
 for the generation assessment and migration constraints.
+
+## Documentation
+
+Resource reference pages and the provider overview in `docs/` are generated,
+not edited by hand. Their sources are provider/resource schema descriptions,
+`templates/index.md.tmpl`, and `examples/`. Each resource has a matching
+`examples/resources/<resource_type>/resource.tf`; supported imports have an
+adjacent `import.sh`. Keep examples concise, declare their inputs, and use
+sensitive variables instead of literal credentials.
+
+Run `make docs` and `make validate-docs` after changing those sources.
+`make generate` and `make generate-local` also regenerate the pages. CI checks
+rendered output and registry structure; unit tests check resource coverage,
+examples, required arguments, and import documentation.
 
 ## Releases
 

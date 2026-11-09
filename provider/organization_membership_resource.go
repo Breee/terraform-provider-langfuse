@@ -61,7 +61,11 @@ func (r *organizationMembershipResource) Metadata(ctx context.Context, req resou
 
 func (r *organizationMembershipResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages membership in a Langfuse organization.",
+		Description: "Manage a user's role in a Langfuse organization using organization-scoped credentials. " +
+			"The resource uses SCIM to create a user when necessary, which requires Enterprise support. " +
+			"Destroy removes organization membership, not the user account. Changing email or organization credentials replaces the resource. " +
+			"Import format: user_id,organization_public_key,organization_private_key. Import credentials are stored in state. " +
+			"status and username are deprecated compatibility attributes because the API does not return them.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The user ID of the organization membership.",
@@ -78,7 +82,7 @@ func (r *organizationMembershipResource) Schema(ctx context.Context, req resourc
 				},
 			},
 			"role": schema.StringAttribute{
-				Description: "The role to assign to the user. Valid values are: ADMIN, MEMBER, VIEWER.",
+				Description: "The role to assign to the user. Valid values are: OWNER, ADMIN, MEMBER, VIEWER, NONE.",
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
@@ -369,5 +373,31 @@ func (r *organizationMembershipResource) Delete(ctx context.Context, req resourc
 }
 
 func (r *organizationMembershipResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.Split(req.ID, ",")
+	if len(parts) == 1 {
+		resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+		return
+	}
+	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+		resp.Diagnostics.AddError("Invalid import format",
+			"Import ID must be in format: user_id,organization_public_key,organization_private_key")
+		return
+	}
+	client := r.ClientFactory.NewOrganizationClient(parts[1], parts[2])
+	membership, err := client.GetMembership(ctx, parts[0])
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing organization membership", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &organizationMembershipResourceModel{
+		ID:                     types.StringValue(membership.UserID),
+		Email:                  types.StringValue(membership.Email),
+		Role:                   types.StringValue(membership.Role),
+		Status:                 types.StringValue(membership.Status),
+		UserID:                 types.StringValue(membership.UserID),
+		Username:               types.StringValue(membership.Username),
+		Name:                   types.StringValue(membership.Name),
+		OrganizationPublicKey:  types.StringValue(parts[1]),
+		OrganizationPrivateKey: types.StringValue(parts[2]),
+	})...)
 }

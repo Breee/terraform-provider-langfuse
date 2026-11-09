@@ -23,6 +23,8 @@ hand for compatibility.
 - [Public API client generator config](langfuse/publicapi/oapi-codegen.yaml)
 - [Admin API client generator config](langfuse/adminapi/oapi-codegen.yaml)
 - [Generation directives](tools/openapi.go)
+- [Provider documentation template](templates/index.md.tmpl)
+- [Resource documentation examples](examples/resources/)
 
 ## Key commands
 
@@ -32,6 +34,7 @@ hand for compatibility.
 - `make generate-local` (regenerate everything from vendored specs; no spec downloads)
 - `make check-generated`
 - `make docs`
+- `make validate-docs`
 - `make testacc` (requires Docker and a Langfuse Enterprise test environment)
 - Weekly signed GitHub releases require `GPG_PRIVATE_KEY` and `PASSPHRASE` repository secrets.
 - Renovate groups updates by Go modules, GitHub Actions, container images, and Terraform.

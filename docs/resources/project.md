@@ -3,21 +3,39 @@
 page_title: "langfuse_project Resource - Langfuse"
 subcategory: ""
 description: |-
-  
+  Create and manage a project using organization-scoped API credentials. Changing organization_id replaces the project. Project deletion is asynchronous. The read API does not return retention_days, so the provider preserves configured retention in state; imports initially use 0. Import format: project_id,organization_id,organization_public_key,organization_private_key. Import credentials are stored in state.
 ---
 
 # langfuse_project (Resource)
 
-
+Create and manage a project using organization-scoped API credentials. Changing organization_id replaces the project. Project deletion is asynchronous. The read API does not return retention_days, so the provider preserves configured retention in state; imports initially use 0. Import format: project_id,organization_id,organization_public_key,organization_private_key. Import credentials are stored in state.
 
 ## Example Usage
 
 ```terraform
-resource "langfuse_project" "my_project" {
-  name                     = "My Project"
-  organization_id          = local.langfuse_organization_id
-  organization_private_key = local.langfuse_secret_key
-  organization_public_key  = local.langfuse_public_key
+variable "organization_id" {
+  type = string
+}
+
+variable "organization_public_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "organization_private_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "langfuse_project" "example" {
+  name                     = "Example Project"
+  organization_id          = var.organization_id
+  organization_public_key  = var.organization_public_key
+  organization_private_key = var.organization_private_key
+  retention_days           = 90
+  metadata = {
+    environment = "development"
+  }
 }
 ```
 
@@ -39,3 +57,14 @@ resource "langfuse_project" "my_project" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Avoid putting literal credentials in shell history.
+terraform import langfuse_project.example "${PROJECT_ID},${ORGANIZATION_ID},${ORGANIZATION_PUBLIC_KEY},${ORGANIZATION_PRIVATE_KEY}"
+```
