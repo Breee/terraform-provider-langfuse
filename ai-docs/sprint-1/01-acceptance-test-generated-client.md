@@ -1,6 +1,6 @@
 # 01 — Acceptance-test the generated client
 
-Status: blocked (`LANGFUSE_EE_LICENSE_KEY` not set)
+Status: in progress; the real-server suite does not yet cover every resource.
 
 ## Problem
 
@@ -32,7 +32,8 @@ Error text for non-success responses is unchanged
 ## Acceptance criteria
 
 - `make testacc` passes with the stack from `testdata/docker-compose.yml`.
-- Each create/read/update/delete/import step of `TestAccLangfuseWorkflow` passes.
+- The workflow, import and replacement tests pass, with independent remote
+  deletion checks and real-server coverage for all seven resource types.
 - Any failure is traced to either a spec defect (fix via overlay + upstream, see
   05) or an adapter mapping bug (fix in `langfuse/*_client.go`).
 
@@ -40,5 +41,5 @@ Error text for non-success responses is unchanged
 
 - The user exports the license key in their shell; it must never be pasted into
   chat or committed.
-- The compose file uses `langfuse/langfuse:latest`; pin it to the version the
-  vendored spec was taken from to make results reproducible.
+- The Compose stack pins Langfuse and RustFS images. See `TESTING.md` for the
+  current coverage and the remaining end-to-end test design.

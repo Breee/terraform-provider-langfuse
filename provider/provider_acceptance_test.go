@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/langfuse/terraform-provider-langfuse/langfuse"
 )
 
 // TestAccLangfuseWorkflow tests the complete workflow of creating and managing
@@ -31,7 +33,7 @@ func TestAccLangfuseWorkflow(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckLangfuseResourcesDestroyed,
+		CheckDestroy:             testAccCheckOrganizationsDestroyed,
 		Steps: []resource.TestStep{
 			// Step 1: Create Organization with metadata
 			{
@@ -127,13 +129,6 @@ func TestAccLangfuseWorkflow(t *testing.T) {
 					resource.TestCheckResourceAttrSet("langfuse_organization_api_key.test", "public_key"),
 					resource.TestCheckResourceAttrSet("langfuse_project_api_key.test", "public_key"),
 					resource.TestCheckResourceAttr("langfuse_project_api_key.test", "note", "acceptance-workflow"),
-				),
-			},
-			// Step 6: Explicit cleanup in dependency order to avoid cleanup issues
-			{
-				Config: testAccLangfuseWorkflowConfig_Cleanup(),
-				Check:  resource.ComposeAggregateTestCheckFunc(
-				// Just verify the empty config applies without errors
 				),
 			},
 		},
@@ -308,20 +303,6 @@ resource "langfuse_project_api_key" "test" {
 `, host, adminKey, orgName, projectName)
 }
 
-func testAccLangfuseWorkflowConfig_Cleanup() string {
-	host := os.Getenv("LANGFUSE_HOST")
-	adminKey := os.Getenv("LANGFUSE_ADMIN_KEY")
-
-	return fmt.Sprintf(`
-provider "langfuse" {
-  host          = "%s"
-  admin_api_key = "%s"
-}
-
-# Empty configuration - this will remove all resources in proper dependency order
-`, host, adminKey)
-}
-
 func TestAccLangfuseOrganizationImport(t *testing.T) {
 	if os.Getenv("TF_ACC") != "1" {
 		t.Skip("TF_ACC not set - skipping acceptance test")
@@ -335,7 +316,7 @@ func TestAccLangfuseOrganizationImport(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckLangfuseResourcesDestroyed,
+		CheckDestroy:             testAccCheckOrganizationsDestroyed,
 		Steps: []resource.TestStep{
 			// Step 1: Create organization and project normally
 			{
@@ -503,7 +484,7 @@ func TestAccLangfuseProjectApiKeyNoteReplace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckLangfuseResourcesDestroyed,
+		CheckDestroy:             testAccCheckOrganizationsDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProjectApiKeyNoteConfig(orgName, projectName, "note-before"),
@@ -582,7 +563,26 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccCheckLangfuseResourcesDestroyed(s *terraform.State) error {
-	// This is lenient about dependency order issues since we're running in an ephemeral Docker environment.
+func testAccCheckOrganizationsDestroyed(s *terraform.State) error {
+	client := langfuse.NewAdminClient(os.Getenv("LANGFUSE_HOST"), os.Getenv("LANGFUSE_ADMIN_KEY"))
+	organizations, err := client.ListOrganizations(context.Background())
+	if err != nil {
+		return fmt.Errorf("list organizations after destroy: %w", err)
+	}
+	found := false
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "langfuse_organization" {
+			continue
+		}
+		found = true
+		for _, organization := range organizations {
+			if organization.ID == rs.Primary.ID {
+				return fmt.Errorf("organization %s still exists after destroy", rs.Primary.ID)
+			}
+		}
+	}
+	if !found {
+		return fmt.Errorf("no organization found in pre-destroy state")
+	}
 	return nil
 }

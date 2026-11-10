@@ -24,28 +24,45 @@ Acceptance tests run against a real Langfuse instance using Docker Compose.
 
 ### Test Strategy
 
-We use a **single comprehensive workflow test** (`TestAccLangfuseWorkflow`) that tests all resources in their natural dependency order:
+The current acceptance suite exercises four resource types in dependency order:
 
 1. **Organization** (foundational resource)
 2. **Organization API Key** (requires organization)  
 3. **Project** (requires organization API key)
 4. **Project API Key** (requires project and organization API key)
 
-This approach provides:
-- ✅ **Realistic testing** of actual user workflows
-- ✅ **Dependency validation** between resources
-- ✅ **End-to-end integration** testing
-- ✅ **Faster execution** with single setup/teardown
-- ✅ **Better coverage** of cross-resource interactions
-- ✅ **Import functionality** validation for existing resources
+It also tests organization and project imports, updates, and project API-key
+replacement. Organization membership, project membership, and LLM connections
+are not covered by the current acceptance suite. The destroy check verifies
+that test organizations disappear from the API, but does not independently
+verify deletion of their child resources.
+
+### E2E coverage design
+
+The target is a real-server lifecycle for every resource, not just a successful
+Terraform apply:
+
+- Create each of the seven resources, read it back through Langfuse's API, and
+  verify the Terraform state and an unchanged follow-up plan.
+- Update supported fields and verify the remote values; assert replacement for
+  immutable fields and preserve write-only credentials across refreshes.
+- Import each resource that supports import, refresh it, and verify subsequent
+  management with the documented import format.
+- Delete resources in dependency order and independently verify their absence
+  through the appropriate API. Poll boundedly for asynchronous project deletion;
+  treat authentication, transport and unexpected API errors as failures.
+- Exercise out-of-band deletion or changes and invalid credentials without
+  touching any non-test instance. Use unique resource names and retain useful
+  diagnostics on failure.
+- Run the suite against a pinned disposable stack with isolated credentials;
+  require a dedicated CI license secret before enabling it in automation.
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- `curl` (for health checks)
 - **Langfuse Enterprise License Key** - Required for admin API access
   - Set the `LANGFUSE_EE_LICENSE_KEY` environment variable
-  - Contact your team lead or check AWS Secrets Manager for the key
+  - Never commit or print the key
 
 ### Running Acceptance Tests
 
@@ -65,10 +82,14 @@ The command checks for the Enterprise license and a working Docker daemon
 before starting containers. It never loads credentials from `testing/.env` or
 targets the live instance used by local example configurations. Acceptance
 tests create and delete resources; only use an isolated test environment.
+The default Compose project is `terraform-provider-langfuse-acceptance`; set
+`COMPOSE_PROJECT_NAME` to isolate concurrent runs. `make test-teardown` removes
+that project's containers and volumes, so use the same project name for setup
+and teardown. Runs also need exclusive use of loopback port 3000.
 
 This will:
 1. Start the Langfuse test environment using Docker Compose
-2. Wait for Langfuse to be healthy
+2. Wait for the web and worker services to be healthy
 3. Run the acceptance tests
 4. Leave the environment running (use `make test-teardown` to clean up)
 
@@ -107,12 +128,15 @@ The acceptance tests require these environment variables:
 The test setup uses:
 
 - **PostgreSQL 15** - Primary database
-- **ClickHouse 23.3** - Analytics database  
+- **ClickHouse** - Analytics database, pinned to the version used by Langfuse's official Compose stack
 - **Redis 7** - Caching layer
-- **MinIO** - S3-compatible object storage
-- **Langfuse** - Main application
+- **RustFS** - S3-compatible object storage
+- **Langfuse web and worker** - Main application and background processing
 
-All services run in Docker containers with health checks to ensure they're ready before tests run.
+RustFS has a readiness check; an initializer creates the S3 bucket before
+Langfuse starts. The web service binds to loopback only. The disposable worker
+uses a shorter project-deletion rate limit so repeated lifecycle tests finish
+without waiting for Langfuse's production default.
 
 ## Test Structure
 
@@ -130,22 +154,21 @@ All services run in Docker containers with health checks to ensure they're ready
 
 ### Test Utilities
 - `testdata/docker-compose.yml` - Test environment definition
-- `scripts/wait-for-langfuse.sh` - Health check script
 
 ## Troubleshooting
 
 ### Tests fail with "connection refused"
-The Langfuse service might not be ready yet. The `wait-for-langfuse.sh` script should handle this, but you can manually check:
+Check whether the Langfuse web service is healthy:
 
 ```bash
-curl http://localhost:3000/api/health
+curl 'http://localhost:3000/api/public/health?failIfDatabaseUnavailable=true'
 ```
 
 ### Docker containers won't start
 Check Docker logs:
 
 ```bash
-docker compose -f testdata/docker-compose.yml logs
+docker compose -p "${COMPOSE_PROJECT_NAME:-terraform-provider-langfuse-acceptance}" -f testdata/docker-compose.yml logs
 ```
 
 ### Port conflicts

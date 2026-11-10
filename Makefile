@@ -1,5 +1,8 @@
 .PHONY: build install test testacc test-all test-prerequisites test-setup test-teardown generate generate-local generate-go generate-api check-generated update-openapi docs validate-docs
 
+COMPOSE_PROJECT_NAME ?= terraform-provider-langfuse-acceptance
+export COMPOSE_PROJECT_NAME
+
 build:
 	go build -v ./...
 
@@ -28,9 +31,7 @@ test-prerequisites:
 
 test-setup: test-prerequisites
 	@echo "Starting Langfuse test environment..."
-	docker compose -f testdata/docker-compose.yml up -d
-	@echo "Waiting for Langfuse to be ready..."
-	./scripts/wait-for-langfuse.sh localhost 3000 600 /
+	docker compose -f testdata/docker-compose.yml up -d --wait --wait-timeout 600
 
 # Tear down test environment
 test-teardown:
