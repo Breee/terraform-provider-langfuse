@@ -5,7 +5,7 @@
 | Output | Inputs | Generator |
 | --- | --- | --- |
 | `langfuse/mocks/*.go` | Interfaces and `go:generate` directives in `langfuse/` | `github.com/golang/mock/mockgen`, pinned by the root `go.mod` |
-| `langfuse/publicapi/publicapi.gen.go` | `openapi/langfuse.yml`, its overlay, and operation selection | `oapi-codegen` v2.8.0, configured in `langfuse/publicapi/oapi-codegen.yaml` |
+| `langfuse/publicapi/publicapi.gen.go` | `openapi/langfuse.yml`, and its overlay (all operations) | `oapi-codegen` v2.8.0, configured in `langfuse/publicapi/oapi-codegen.yaml` |
 | `langfuse/adminapi/adminapi.gen.go` | `openapi/langfuse-organizations.yml` and its overlay | `oapi-codegen` v2.8.0, configured in `langfuse/adminapi/oapi-codegen.yaml` |
 | `docs/` | Provider schemas/descriptions, `templates/index.md.tmpl`, `examples/provider/`, and `examples/resources/<resource_type>/` | `terraform-plugin-docs` from `tools/go.mod` |
 | `examples/*.tf` formatting | Terraform examples | `terraform fmt` |

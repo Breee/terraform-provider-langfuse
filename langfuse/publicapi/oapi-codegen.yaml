@@ -10,21 +10,3 @@ output-options:
   overlay:
     path: ../openapi/langfuse.overlay.yml
     strict: true
-  include-operation-ids:
-    - projects_create
-    - projects_update
-    - projects_delete
-    - projects_getApiKeys
-    - projects_createApiKey
-    - projects_deleteApiKey
-    - organizations_getOrganizationProjects
-    - organizations_getOrganizationMemberships
-    - organizations_updateOrganizationMembership
-    - organizations_deleteOrganizationMembership
-    - organizations_getProjectMemberships
-    - organizations_updateProjectMembership
-    - organizations_deleteProjectMembership
-    - scim_createUser
-    - llmConnections_list
-    - llmConnections_upsert
-    - llmConnections_delete
