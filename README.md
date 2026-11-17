@@ -94,6 +94,7 @@ lifecycle limitations, and import guidance:
 | Models | [Model](docs/resources/model.md) |
 | Prompts | [Prompt](docs/resources/prompt.md) |
 | Score configs | [Score config](docs/resources/score_config.md) |
+| Skills | [Skill](docs/resources/skill.md) |
 
 Reference pages are generated from schema descriptions, templates, and examples;
 do not edit `docs/` by hand.

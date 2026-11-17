@@ -32,7 +32,7 @@ func (p *langfuseProvider) Schema(ctx context.Context, req provider.SchemaReques
 	resp.Schema = schema.Schema{
 		Description: "Manage Langfuse organizations, projects, API keys, memberships, and LLM connections with Terraform or OpenTofu. " +
 			"Organization management requires an Enterprise-enabled Langfuse instance and an admin API key. " +
-			"Project, membership, and blob storage integration resources use organization-scoped keys; LLM connections, annotation queues, datasets, dataset items, evaluation rules, evaluators, models, prompts, and score configs use project-scoped keys.",
+			"Project, membership, and blob storage integration resources use organization-scoped keys; LLM connections, annotation queues, datasets, dataset items, evaluation rules, evaluators, models, prompts, score configs, and skills use project-scoped keys.",
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
 				Optional:    true,
@@ -97,6 +97,7 @@ func (p *langfuseProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewModelResource,
 		NewPromptResource,
 		NewScoreConfigResource,
+		NewSkillResource,
 	}
 }
 
