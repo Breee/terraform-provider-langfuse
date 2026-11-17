@@ -86,6 +86,7 @@ lifecycle limitations, and import guidance:
 | Project memberships | [Project membership](docs/resources/project_membership.md) |
 | LLM connections | [LLM connection](docs/resources/llm_connection.md) |
 | Datasets | [Dataset](docs/resources/dataset.md) |
+| Dataset items | [Dataset item](docs/resources/dataset_item.md) |
 | Models | [Model](docs/resources/model.md) |
 | Prompts | [Prompt](docs/resources/prompt.md) |
 | Score configs | [Score config](docs/resources/score_config.md) |
