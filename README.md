@@ -86,6 +86,7 @@ lifecycle limitations, and import guidance:
 | Project memberships | [Project membership](docs/resources/project_membership.md) |
 | LLM connections | [LLM connection](docs/resources/llm_connection.md) |
 | Models | [Model](docs/resources/model.md) |
+| Prompts | [Prompt](docs/resources/prompt.md) |
 | Score configs | [Score config](docs/resources/score_config.md) |
 
 Reference pages are generated from schema descriptions, templates, and examples;
