@@ -19,7 +19,7 @@ test:
 
 # Run acceptance tests (requires docker)
 testacc: test-setup
-	TF_ACC=1 LANGFUSE_HOST=http://localhost:$(LANGFUSE_PORT) LANGFUSE_ADMIN_KEY=test_admin_key go test ./provider -v -run TestAcc
+	TF_ACC=1 LANGFUSE_HOST=http://localhost:$(LANGFUSE_PORT) LANGFUSE_ADMIN_KEY=test_admin_key go test ./provider -v -timeout 60m -run TestAcc
 
 # Run all tests (unit + acceptance)
 test-all: test testacc
