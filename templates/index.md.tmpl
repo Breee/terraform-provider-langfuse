@@ -14,8 +14,8 @@ description: |-
 | Scope | Configuration | Used by |
 | --- | --- | --- |
 | Admin | `admin_api_key` or `LANGFUSE_ADMIN_KEY` | Organizations and organization API keys |
-| Organization | Resource `organization_public_key` and `organization_private_key` | Projects, project API keys, and memberships |
-| Project | Resource `project_public_key` and `project_secret_key` | LLM connections |
+| Organization | `organization_public_key` and `organization_private_key` | Projects, project API keys, memberships, blob storage integrations, organization LLM connections; `langfuse_projects` and `langfuse_user` data sources |
+| Project | `project_public_key` and `project_secret_key` | LLM connections, annotation queues, datasets, dataset items, evaluation rules, evaluators, models, prompts, score configs, skills; `langfuse_project`, `langfuse_prompt`, `langfuse_score_config`, and `langfuse_dataset` data sources |
 
 `host` is configured in the provider block; it does not read `LANGFUSE_HOST`.
 An Enterprise license is configured on the Langfuse server, not in this provider.
@@ -41,6 +41,27 @@ publication is complete.
 - [Project API key](resources/project_api_key.md)
 - [Project membership](resources/project_membership.md)
 - [LLM connection](resources/llm_connection.md)
+- [Organization LLM connection](resources/organization_llm_connection.md)
+- [Annotation queue](resources/annotation_queue.md)
+- [Annotation queue assignment](resources/annotation_queue_assignment.md)
+- [Blob storage integration](resources/blob_storage_integration.md)
+- [Dataset](resources/dataset.md)
+- [Dataset item](resources/dataset_item.md)
+- [Evaluation rule](resources/evaluation_rule.md)
+- [Evaluator](resources/evaluator.md)
+- [Model](resources/model.md)
+- [Prompt](resources/prompt.md)
+- [Score config](resources/score_config.md)
+- [Skill](resources/skill.md)
+
+## Data sources
+
+- [Dataset](data-sources/dataset.md)
+- [Project](data-sources/project.md)
+- [Projects](data-sources/projects.md)
+- [Prompt](data-sources/prompt.md)
+- [Score config](data-sources/score_config.md)
+- [User](data-sources/user.md)
 
 ## Example Usage
 

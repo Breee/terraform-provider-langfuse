@@ -97,6 +97,15 @@ lifecycle limitations, and import guidance:
 | Score configs | [Score config](docs/resources/score_config.md) |
 | Skills | [Skill](docs/resources/skill.md) |
 
+| Data source | Reference |
+| --- | --- |
+| Dataset by name | [Dataset](docs/data-sources/dataset.md) |
+| Project of a project API key | [Project](docs/data-sources/project.md) |
+| Projects of an organization | [Projects](docs/data-sources/projects.md) |
+| Prompt version | [Prompt](docs/data-sources/prompt.md) |
+| Score config by name | [Score config](docs/data-sources/score_config.md) |
+| Organization member by email | [User](docs/data-sources/user.md) |
+
 Reference pages are generated from schema descriptions, templates, and examples;
 do not edit `docs/` by hand.
 
