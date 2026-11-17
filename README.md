@@ -85,6 +85,7 @@ lifecycle limitations, and import guidance:
 | Project API keys | [Project API key](docs/resources/project_api_key.md) |
 | Project memberships | [Project membership](docs/resources/project_membership.md) |
 | LLM connections | [LLM connection](docs/resources/llm_connection.md) |
+| Models | [Model](docs/resources/model.md) |
 
 Reference pages are generated from schema descriptions, templates, and examples;
 do not edit `docs/` by hand.

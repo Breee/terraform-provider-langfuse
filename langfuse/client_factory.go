@@ -20,6 +20,8 @@ type ClientFactory interface {
 	NewAdminClient() AdminClient
 	NewOrganizationClient(publicKey, privateKey string) OrganizationClient
 	NewLlmConnectionsClient(publicKey, privateKey string) LlmConnectionsClient
+	// NewPublicAPIClient returns the generated public API client authenticated with the given API key pair.
+	NewPublicAPIClient(publicKey, privateKey string) publicapi.ClientInterface
 }
 
 func NewClientFactory(host, adminApiKey string) ClientFactory {
@@ -39,4 +41,8 @@ func (cf *clientFactoryImpl) NewOrganizationClient(publicKey, privateKey string)
 
 func (cf *clientFactoryImpl) NewLlmConnectionsClient(publicKey, privateKey string) LlmConnectionsClient {
 	return NewLlmConnectionsClient(cf.host, publicKey, privateKey)
+}
+
+func (cf *clientFactoryImpl) NewPublicAPIClient(publicKey, privateKey string) publicapi.ClientInterface {
+	return newPublicAPIClient(cf.host, publicKey, privateKey).ClientInterface
 }

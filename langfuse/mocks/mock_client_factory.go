@@ -3,12 +3,14 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	langfuse "github.com/langfuse/terraform-provider-langfuse/langfuse"
+	"github.com/langfuse/terraform-provider-langfuse/langfuse/publicapi"
 )
 
 type mockClientFactory struct {
 	AdminClient          *MockAdminClient
 	OrganizationClient   *MockOrganizationClient
 	LlmConnectionsClient *MockLlmConnectionsClient
+	PublicAPIClient      publicapi.ClientInterface
 }
 
 func NewMockClientFactory(ctrl *gomock.Controller) *mockClientFactory {
@@ -29,4 +31,8 @@ func (cf *mockClientFactory) NewOrganizationClient(publicKey, privateKey string)
 
 func (cf *mockClientFactory) NewLlmConnectionsClient(publicKey, privateKey string) langfuse.LlmConnectionsClient {
 	return cf.LlmConnectionsClient
+}
+
+func (cf *mockClientFactory) NewPublicAPIClient(publicKey, privateKey string) publicapi.ClientInterface {
+	return cf.PublicAPIClient
 }
