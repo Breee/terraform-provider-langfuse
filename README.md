@@ -85,6 +85,7 @@ lifecycle limitations, and import guidance:
 | Project API keys | [Project API key](docs/resources/project_api_key.md) |
 | Project memberships | [Project membership](docs/resources/project_membership.md) |
 | LLM connections | [LLM connection](docs/resources/llm_connection.md) |
+| Datasets | [Dataset](docs/resources/dataset.md) |
 | Models | [Model](docs/resources/model.md) |
 | Prompts | [Prompt](docs/resources/prompt.md) |
 | Score configs | [Score config](docs/resources/score_config.md) |
