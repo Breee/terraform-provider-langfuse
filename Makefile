@@ -3,6 +3,10 @@
 COMPOSE_PROJECT_NAME ?= terraform-provider-langfuse-acceptance
 export COMPOSE_PROJECT_NAME
 
+# Host port of the disposable Langfuse stack; override when 3000 is taken.
+LANGFUSE_PORT ?= 3000
+export LANGFUSE_PORT
+
 build:
 	go build -v ./...
 
@@ -15,7 +19,7 @@ test:
 
 # Run acceptance tests (requires docker)
 testacc: test-setup
-	TF_ACC=1 LANGFUSE_HOST=http://localhost:3000 LANGFUSE_ADMIN_KEY=test_admin_key go test ./provider -v -run TestAcc
+	TF_ACC=1 LANGFUSE_HOST=http://localhost:$(LANGFUSE_PORT) LANGFUSE_ADMIN_KEY=test_admin_key go test ./provider -v -run TestAcc
 
 # Run all tests (unit + acceptance)
 test-all: test testacc

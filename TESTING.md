@@ -85,7 +85,7 @@ tests create and delete resources; only use an isolated test environment.
 The default Compose project is `terraform-provider-langfuse-acceptance`; set
 `COMPOSE_PROJECT_NAME` to isolate concurrent runs. `make test-teardown` removes
 that project's containers and volumes, so use the same project name for setup
-and teardown. Runs also need exclusive use of loopback port 3000.
+and teardown. Runs also need exclusive use of loopback port `LANGFUSE_PORT` (default 3000).
 
 This will:
 1. Start the Langfuse test environment using Docker Compose
@@ -172,4 +172,4 @@ docker compose -p "${COMPOSE_PROJECT_NAME:-terraform-provider-langfuse-acceptanc
 ```
 
 ### Port conflicts
-If port 3000 is already in use, you can modify the docker-compose.yml to use a different port and update the `LANGFUSE_HOST` environment variable accordingly.
+If port 3000 is already in use, set `LANGFUSE_PORT` for setup, tests, and teardown, for example `LANGFUSE_PORT=3300 make testacc`.
