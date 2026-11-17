@@ -108,6 +108,20 @@ func withProjectCredentials(attrs map[string]schema.Attribute) map[string]schema
 	return attrs
 }
 
+func withOrganizationCredentials(attrs map[string]schema.Attribute) map[string]schema.Attribute {
+	attrs["organization_public_key"] = schema.StringAttribute{
+		Required:    true,
+		Sensitive:   true,
+		Description: "The organization public key used to authenticate API calls.",
+	}
+	attrs["organization_private_key"] = schema.StringAttribute{
+		Required:    true,
+		Sensitive:   true,
+		Description: "The organization private key used to authenticate API calls.",
+	}
+	return attrs
+}
+
 // parseCredentialImportID splits "<public_key>:<secret_key>:<identifier>".
 // The identifier is returned verbatim and may itself contain colons.
 func parseCredentialImportID(id string) (publicKey, secretKey, identifier string, err error) {
