@@ -38,7 +38,7 @@ func (r *annotationQueueAssignmentResource) Schema(_ context.Context, _ resource
 		Description: "Assign a user to an annotation queue using project-scoped credentials. " +
 			"The user must have access to the project, for example through an organization membership with a role other than NONE. " +
 			"The Langfuse API can only create and delete assignments: there is no endpoint to read them, " +
-			"so an assignment removed outside Terraform is not detected and the resource cannot be imported.",
+			"so an assignment removed outside Terraform is not detected. Import is not supported.",
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
