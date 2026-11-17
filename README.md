@@ -85,6 +85,7 @@ lifecycle limitations, and import guidance:
 | Project API keys | [Project API key](docs/resources/project_api_key.md) |
 | Project memberships | [Project membership](docs/resources/project_membership.md) |
 | LLM connections | [LLM connection](docs/resources/llm_connection.md) |
+| Organization LLM connections | [Organization LLM connection](docs/resources/organization_llm_connection.md) |
 | Annotation queues | [Annotation queue](docs/resources/annotation_queue.md), [Annotation queue assignment](docs/resources/annotation_queue_assignment.md) |
 | Blob storage integrations | [Blob storage integration](docs/resources/blob_storage_integration.md) |
 | Datasets | [Dataset](docs/resources/dataset.md) |
