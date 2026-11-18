@@ -19,6 +19,21 @@
 - Do not commit credentials, local `.env` files, Terraform state, or generated
   local binaries.
 
+## Hard rule: never hack around limitations
+
+If the Langfuse API, the OpenAPI spec, or a tool has a limitation that may be a
+bug or a design gap (missing endpoint, ignored `null`, wrong status code):
+
+1. Stop. Do not work around it (no warn-only destroy, sentinel values, no-op
+   reads, or retries that hide the error).
+2. Record it in [`ai-docs/caveats.md`](ai-docs/caveats.md) (next C-number) with
+   the exact symptom and versions.
+3. Write a submittable report in `ai-docs/upstream/<project>-<slug>.md` (repro,
+   expected vs actual, versions). Search for an existing upstream issue or
+   discussion first and link it.
+4. Tell the user and let them decide. A workaround ships only after the user
+   approves it; note the approval in the caveat entry.
+
 ## Hard rules for issues
 
 Every issue must contain these sections, in this order:
