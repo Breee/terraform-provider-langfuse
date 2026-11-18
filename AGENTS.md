@@ -36,6 +36,9 @@ bug or a design gap (missing endpoint, ignored `null`, wrong status code):
 
 ## Hard rules for issues
 
+Load the `project-management` skill (`.opencode/skills/project-management/`)
+before creating, starting, or closing work.
+
 Every issue must contain these sections, in this order:
 
 - **WHAT**: the concrete change, including affected resources, endpoints, and files.
