@@ -1,5 +1,7 @@
 # Public API: annotation queues cannot be updated or deleted; assignments cannot be listed
 
+Tracking issue: #31. Upstream link: not filed yet.
+
 Project: langfuse/langfuse — version 4.77.0 (self-hosted). Caveats C02, C03. No existing issue or discussion found (search "annotation queue delete api", "annotation queue update api", 2026-11-18).
 
 ## What

@@ -1,5 +1,7 @@
 # Public API: no endpoint to delete a dataset
 
+Tracking issue: #30. Upstream link: not filed yet.
+
 Project: langfuse/langfuse — version 4.77.0 (self-hosted). Caveat C01. No existing issue or discussion found (GitHub issue + discussion search "delete dataset api", 2026-11-18).
 
 ## What

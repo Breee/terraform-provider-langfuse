@@ -1,5 +1,7 @@
 # Public API: no endpoint to delete a score config
 
+Tracking issue: #32. Upstream link: not filed yet.
+
 Project: langfuse/langfuse — version 4.77.0 (self-hosted). Caveat C04. No existing issue or discussion found (search "delete score config api", 2026-11-18).
 
 ## What

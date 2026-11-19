@@ -1,5 +1,7 @@
 # Public API: `null` does not clear optional fields consistently
 
+Tracking issue: #33. Upstream link: not filed yet.
+
 Project: langfuse/langfuse — version 4.77.0 (self-hosted). Caveat C05. No existing issue found (2026-11-18).
 
 ## What
