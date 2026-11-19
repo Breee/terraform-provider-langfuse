@@ -51,12 +51,19 @@ func (r *datasetResource) Metadata(_ context.Context, req resource.MetadataReque
 	resp.TypeName = req.ProviderTypeName + "_dataset"
 }
 
+const (
+	datasetDescription = "Manage a dataset in a project using project-scoped credentials. " +
+		"The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. " +
+		"Import format: project_public_key:project_secret_key:dataset_name."
+	datasetNote = "Datasets cannot be deleted through the Langfuse public API. " +
+		"Destroying this resource removes it from the Terraform state with a warning and leaves the dataset, its items, and its runs in Langfuse; delete it in the Langfuse UI. " +
+		"Renaming a dataset creates a new one and leaves the previous one behind."
+)
+
 func (r *datasetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage a dataset in a project using project-scoped credentials. " +
-			"The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. " +
-			"The API has no delete endpoint for datasets: destroying this resource only removes it from state and leaves the dataset, its items, and its runs in Langfuse. " +
-			"Import format: project_public_key:project_secret_key:dataset_name.",
+		Description:         datasetDescription + " Note: " + datasetNote,
+		MarkdownDescription: datasetDescription + noteCallout(datasetNote),
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -77,7 +84,7 @@ func (r *datasetResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "Description of the dataset.",
+				Description: "Description of the dataset. Must not be empty; omit the attribute to clear the description.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},

@@ -11,7 +11,7 @@ curl -u $PK:$SK -X DELETE -w '%{http_code}\n' $HOST/api/public/annotation-queues
 curl -u $PK:$SK -X PATCH  -w '%{http_code}\n' -H 'Content-Type: application/json' -d '{"description":"x"}' $HOST/api/public/annotation-queues/$QUEUE_ID
 curl -u $PK:$SK -w '%{http_code}\n' $HOST/api/public/annotation-queues/$QUEUE_ID/assignments
 ```
-Actual: no such operations. Expected: `PATCH` and `DELETE` on a queue, `GET` on its assignments.
+Actual (4.77.0, verified 2026-11-19): all three return `405 {"message":"Method not allowed","error":"MethodNotAllowedError"}`. Expected: `PATCH` and `DELETE` on a queue, `GET` on its assignments.
 
 ## Why it matters
 Queue names are unique, so a queue created by automation can neither be corrected nor removed; a changed description needs a new queue under a new name. Without a list of assignments a client cannot detect that an assignment was removed in the UI.

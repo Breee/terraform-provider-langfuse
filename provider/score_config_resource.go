@@ -72,6 +72,14 @@ func (r *scoreConfigResource) Metadata(_ context.Context, req resource.MetadataR
 	resp.TypeName = req.ProviderTypeName + "_score_config"
 }
 
+const (
+	scoreConfigDescription = "Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. " +
+		"Import format: project_public_key:project_secret_key:score_config_id."
+	scoreConfigNote = "Score configs cannot be deleted through the Langfuse public API. " +
+		"Destroying this resource archives the score config (is_archived = true) and removes it from the Terraform state; the archived score config stays in Langfuse. " +
+		"Replacing the resource likewise leaves the previous score config behind as archived. Archived score configs do not reserve their name."
+)
+
 func (r *scoreConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	// The API rejects null for a bound that is already set, so removing one
 	// can only be done by creating a new score config.
@@ -83,10 +91,8 @@ func (r *scoreConfigResource) Schema(_ context.Context, _ resource.SchemaRequest
 		"Removing a bound requires a new score config because the API cannot clear it.",
 	)
 	resp.Schema = schema.Schema{
-		Description: "Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. " +
-			"The Langfuse API has no delete endpoint for score configs: destroying this resource archives the score config (is_archived = true) and removes it from state. " +
-			"Replacing the resource therefore leaves the previous score config behind as archived. " +
-			"Import format: project_public_key:project_secret_key:score_config_id.",
+		Description:         scoreConfigDescription + " Note: " + scoreConfigNote,
+		MarkdownDescription: scoreConfigDescription + noteCallout(scoreConfigNote),
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -111,7 +117,7 @@ func (r *scoreConfigResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "Description shown to annotators.",
+				Description: "Description shown to annotators. Must not be empty; omit the attribute to clear the description.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},

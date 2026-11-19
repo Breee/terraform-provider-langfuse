@@ -60,6 +60,12 @@ func (r apiResult) decode(out any) error {
 	return nil
 }
 
+// noteCallout and warningCallout render a limitation as a registry callout
+// below a resource description.
+func noteCallout(text string) string { return "\n\n~> **Note:** " + text }
+
+func warningCallout(text string) string { return "\n\n!> **Warning:** " + text }
+
 func jsonBody(v any) (io.Reader, error) {
 	b, err := json.Marshal(v)
 	if err != nil {

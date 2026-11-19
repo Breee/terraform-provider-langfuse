@@ -33,12 +33,18 @@ func (r *annotationQueueAssignmentResource) Metadata(_ context.Context, req reso
 	resp.TypeName = req.ProviderTypeName + "_annotation_queue_assignment"
 }
 
+const (
+	annotationQueueAssignmentDescription = "Assign a user to an annotation queue using project-scoped credentials. " +
+		"The user must have access to the project, for example through an organization membership with a role other than NONE."
+	annotationQueueAssignmentWarning = "The Langfuse public API can only create and delete assignments; there is no endpoint to read or list them. " +
+		"Terraform therefore cannot verify that the assignment still exists: an assignment removed outside Terraform is not detected and not restored until the resource is replaced. " +
+		"Import is not supported."
+)
+
 func (r *annotationQueueAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Assign a user to an annotation queue using project-scoped credentials. " +
-			"The user must have access to the project, for example through an organization membership with a role other than NONE. " +
-			"The Langfuse API can only create and delete assignments: there is no endpoint to read them, " +
-			"so an assignment removed outside Terraform is not detected. Import is not supported.",
+		Description:         annotationQueueAssignmentDescription + " Warning: " + annotationQueueAssignmentWarning,
+		MarkdownDescription: annotationQueueAssignmentDescription + warningCallout(annotationQueueAssignmentWarning),
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

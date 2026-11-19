@@ -3,12 +3,15 @@
 page_title: "langfuse_annotation_queue_assignment Resource - Langfuse"
 subcategory: ""
 description: |-
-  Assign a user to an annotation queue using project-scoped credentials. The user must have access to the project, for example through an organization membership with a role other than NONE. The Langfuse API can only create and delete assignments: there is no endpoint to read them, so an assignment removed outside Terraform is not detected. Import is not supported.
+  Assign a user to an annotation queue using project-scoped credentials. The user must have access to the project, for example through an organization membership with a role other than NONE.
+  !> Warning: The Langfuse public API can only create and delete assignments; there is no endpoint to read or list them. Terraform therefore cannot verify that the assignment still exists: an assignment removed outside Terraform is not detected and not restored until the resource is replaced. Import is not supported.
 ---
 
 # langfuse_annotation_queue_assignment (Resource)
 
-Assign a user to an annotation queue using project-scoped credentials. The user must have access to the project, for example through an organization membership with a role other than NONE. The Langfuse API can only create and delete assignments: there is no endpoint to read them, so an assignment removed outside Terraform is not detected. Import is not supported.
+Assign a user to an annotation queue using project-scoped credentials. The user must have access to the project, for example through an organization membership with a role other than NONE.
+
+!> **Warning:** The Langfuse public API can only create and delete assignments; there is no endpoint to read or list them. Terraform therefore cannot verify that the assignment still exists: an assignment removed outside Terraform is not detected and not restored until the resource is replaced. Import is not supported.
 
 ## Example Usage
 

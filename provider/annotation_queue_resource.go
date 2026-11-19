@@ -49,13 +49,18 @@ func (r *annotationQueueResource) Metadata(_ context.Context, req resource.Metad
 	resp.TypeName = req.ProviderTypeName + "_annotation_queue"
 }
 
+const (
+	annotationQueueDescription = "Manage an annotation queue in a project using project-scoped credentials. " +
+		"Import format: project_public_key:project_secret_key:annotation_queue_id."
+	annotationQueueNote = "Annotation queues can only be created and read through the Langfuse public API; they cannot be updated or deleted. " +
+		"Every change therefore forces a new queue, and because queue names are unique and the previous queue cannot be deleted, a change must also rename the queue (the plan fails otherwise). " +
+		"Destroying this resource removes it from the Terraform state with a warning and leaves the queue and its items in Langfuse; delete it in the Langfuse UI."
+)
+
 func (r *annotationQueueResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage an annotation queue in a project using project-scoped credentials. " +
-			"The Langfuse API can only create and read annotation queues. " +
-			"Every change therefore forces a new queue, and because queue names are unique and the previous queue cannot be deleted, a change must also rename the queue. " +
-			"Destroying this resource only removes it from state and leaves the queue and its items in Langfuse. " +
-			"Import format: project_public_key:project_secret_key:annotation_queue_id.",
+		Description:         annotationQueueDescription + " Note: " + annotationQueueNote,
+		MarkdownDescription: annotationQueueDescription + noteCallout(annotationQueueNote),
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

@@ -106,6 +106,14 @@ lifecycle limitations, and import guidance:
 | Score config by name | [Score config](docs/data-sources/score_config.md) |
 | Organization member by email | [User](docs/data-sources/user.md) |
 
+Some resources cannot go through the full Terraform lifecycle because the
+Langfuse public API lacks the endpoint (datasets and annotation queues cannot be
+deleted, score configs are archived on destroy, queue assignments cannot be read
+back). The affected resource pages start with a note or warning box, the
+[provider index](docs/index.md#known-limitations) lists them, and
+[`ai-docs/caveats.md`](ai-docs/caveats.md) records the evidence, the decision,
+and the upstream report for each.
+
 Reference pages are generated from schema descriptions, templates, and examples;
 do not edit `docs/` by hand.
 

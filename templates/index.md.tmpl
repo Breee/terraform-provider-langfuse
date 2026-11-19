@@ -27,6 +27,20 @@ Use an encrypted, access-controlled state backend and do not commit state files.
 API key secrets and LLM credentials cannot be recovered from the API after
 creation; retain their configuration and state securely.
 
+## Known limitations
+
+Some Langfuse objects cannot go through the full Terraform lifecycle because
+the Langfuse public API has no endpoint for it. Each affected resource page
+starts with a note or warning box that states the exact behaviour.
+
+| Resource | Limitation | What the provider does |
+|---|---|---|
+| `langfuse_dataset` | No delete endpoint | Destroy removes it from state with a warning; the dataset stays in Langfuse |
+| `langfuse_annotation_queue` | No update or delete endpoint | Every change forces a new, renamed queue; destroy removes it from state with a warning |
+| `langfuse_annotation_queue_assignment` | No read endpoint | Changes made outside Terraform are not detected; import is not supported |
+| `langfuse_score_config` | No delete endpoint | Destroy archives the score config |
+| `langfuse_dataset_item` | `null` does not clear `input`, `expected_output`, `metadata` | Removing one of them forces a new item |
+
 The Terraform and OpenTofu registry listings for this fork are pending.
 The historical `langfuse/langfuse` registry address refers to upstream, not
 this fork. Follow the repository's local-development instructions until

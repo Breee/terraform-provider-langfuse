@@ -3,12 +3,15 @@
 page_title: "langfuse_score_config Resource - Langfuse"
 subcategory: ""
 description: |-
-  Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. The Langfuse API has no delete endpoint for score configs: destroying this resource archives the score config (is_archived = true) and removes it from state. Replacing the resource therefore leaves the previous score config behind as archived. Import format: project_public_key:project_secret_key:score_config_id.
+  Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. Import format: project_public_key:project_secret_key:score_config_id.
+  ~> Note: Score configs cannot be deleted through the Langfuse public API. Destroying this resource archives the score config (is_archived = true) and removes it from the Terraform state; the archived score config stays in Langfuse. Replacing the resource likewise leaves the previous score config behind as archived. Archived score configs do not reserve their name.
 ---
 
 # langfuse_score_config (Resource)
 
-Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. The Langfuse API has no delete endpoint for score configs: destroying this resource archives the score config (is_archived = true) and removes it from state. Replacing the resource therefore leaves the previous score config behind as archived. Import format: project_public_key:project_secret_key:score_config_id.
+Manage a score config (the schema that scores of a given name must follow) in a project using project-scoped credentials. Import format: project_public_key:project_secret_key:score_config_id.
+
+~> **Note:** Score configs cannot be deleted through the Langfuse public API. Destroying this resource archives the score config (is_archived = true) and removes it from the Terraform state; the archived score config stays in Langfuse. Replacing the resource likewise leaves the previous score config behind as archived. Archived score configs do not reserve their name.
 
 ## Example Usage
 
@@ -66,7 +69,7 @@ resource "langfuse_score_config" "hallucination" {
 ### Optional
 
 - `categories` (Attributes List) Categories for CATEGORICAL scores. Required for CATEGORICAL and not allowed for other data types; BOOLEAN score configs get True/False categories from Langfuse automatically. (see [below for nested schema](#nestedatt--categories))
-- `description` (String) Description shown to annotators.
+- `description` (String) Description shown to annotators. Must not be empty; omit the attribute to clear the description.
 - `is_archived` (Boolean) Whether the score config is archived. Archived score configs cannot be used for new scores. Defaults to false.
 - `max_value` (Number) Maximum value for NUMERIC scores. Removing it forces a new score config.
 - `min_value` (Number) Minimum value for NUMERIC scores. Removing it forces a new score config.

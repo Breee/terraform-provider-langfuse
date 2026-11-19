@@ -3,12 +3,15 @@
 page_title: "langfuse_dataset Resource - Langfuse"
 subcategory: ""
 description: |-
-  Manage a dataset in a project using project-scoped credentials. The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. The API has no delete endpoint for datasets: destroying this resource only removes it from state and leaves the dataset, its items, and its runs in Langfuse. Import format: project_public_key:project_secret_key:dataset_name.
+  Manage a dataset in a project using project-scoped credentials. The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. Import format: project_public_key:project_secret_key:dataset_name.
+  ~> Note: Datasets cannot be deleted through the Langfuse public API. Destroying this resource removes it from the Terraform state with a warning and leaves the dataset, its items, and its runs in Langfuse; delete it in the Langfuse UI. Renaming a dataset creates a new one and leaves the previous one behind.
 ---
 
 # langfuse_dataset (Resource)
 
-Manage a dataset in a project using project-scoped credentials. The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. The API has no delete endpoint for datasets: destroying this resource only removes it from state and leaves the dataset, its items, and its runs in Langfuse. Import format: project_public_key:project_secret_key:dataset_name.
+Manage a dataset in a project using project-scoped credentials. The Langfuse API creates or updates a dataset by name, so applying this resource adopts an existing dataset with the same name. Import format: project_public_key:project_secret_key:dataset_name.
+
+~> **Note:** Datasets cannot be deleted through the Langfuse public API. Destroying this resource removes it from the Terraform state with a warning and leaves the dataset, its items, and its runs in Langfuse; delete it in the Langfuse UI. Renaming a dataset creates a new one and leaves the previous one behind.
 
 ## Example Usage
 
@@ -51,7 +54,7 @@ resource "langfuse_dataset" "support_faq" {
 
 ### Optional
 
-- `description` (String) Description of the dataset.
+- `description` (String) Description of the dataset. Must not be empty; omit the attribute to clear the description.
 - `expected_output_schema` (String) JSON Schema, as a JSON string, that the expected output of every dataset item is validated against.
 - `input_schema` (String) JSON Schema, as a JSON string, that the input of every dataset item is validated against.
 - `metadata` (String) Metadata of the dataset as a JSON string. Removing it resets the metadata to an empty object because the API cannot clear it.

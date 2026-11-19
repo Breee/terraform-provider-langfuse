@@ -71,6 +71,11 @@ func (r *datasetItemResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"Intended for small, curated sets of items that belong in version control; bulk data is better loaded through the Langfuse SDKs. " +
 			"The Langfuse API creates or updates an item by ID, so setting id to an existing item of the same dataset adopts it. " +
 			"Import format: project_public_key:project_secret_key:dataset_item_id.",
+		MarkdownDescription: "Manage a dataset item in a project using project-scoped credentials. " +
+			"Intended for small, curated sets of items that belong in version control; bulk data is better loaded through the Langfuse SDKs. " +
+			"The Langfuse API creates or updates an item by ID, so setting `id` to an existing item of the same dataset adopts it. " +
+			"Import format: project_public_key:project_secret_key:dataset_item_id." +
+			noteCallout("The Langfuse public API ignores `null` for `input`, `expected_output`, and `metadata`, so a value cannot be cleared in place. Removing one of these attributes forces a new item."),
 		Attributes: withProjectCredentials(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Optional:    true,
