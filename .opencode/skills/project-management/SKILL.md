@@ -7,7 +7,7 @@ description: Use before creating, updating, starting, or closing any work item i
 
 Source of truth: GitHub issues in `Breee/terraform-provider-langfuse` + GitHub Project **Terraform Provider Langfuse** (`gh project … 3 --owner Breee`, https://github.com/users/Breee/projects/3). Milestones are not used.
 
-## Issue types (one label each)
+## Issue types (one label each, template in `.github/ISSUE_TEMPLATE/`)
 
 | Label | Use when | Must contain |
 |---|---|---|
@@ -31,7 +31,7 @@ Blocked: label `blocked` + comment with blocker and link.
 
 ## Workflow
 
-1. **Create** with `gh issue create -R Breee/terraform-provider-langfuse --label <type> --body-file <file>`; `gh project item-add 3 --owner Breee --url <issue>`.
+1. **Create** with `gh issue create -R Breee/terraform-provider-langfuse --label <type> --body-file <file>` with a body following the template; `gh project item-add 3 --owner Breee --url <issue>`.
 2. **Start**: Sprint set, Status In Progress.
 3. **Commit**: `<type>: <what> (#N)`, small steps.
 4. **Verify**: `make generate-local`, `make test`, `git add -A && make check-generated`, `golangci-lint run`, `make validate-docs`, acceptance test against the local stack (`TESTING.md`). `make test` must show no FAIL before committing.
