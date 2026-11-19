@@ -1,7 +1,7 @@
 name: Upstream report
 description: "Bug or limit in Langfuse or a dependency (hard rule: no workarounds)."
 title: "upstream: "
-labels: ["upstream"]
+labels: ["type:upstream"]
 projects: ["Breee/3"]
 body:
   - type: input

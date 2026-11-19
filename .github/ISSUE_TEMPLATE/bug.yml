@@ -1,7 +1,7 @@
 name: Bug
 description: "The provider behaves wrong."
 title: ""
-labels: ["bug"]
+labels: ["type:bug"]
 projects: ["Breee/3"]
 body:
   - type: textarea

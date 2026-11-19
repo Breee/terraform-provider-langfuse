@@ -1,7 +1,7 @@
 name: Caveat
 description: "Known, documented limitation (ai-docs/caveats.md)."
 title: ""
-labels: ["caveat"]
+labels: ["type:caveat"]
 projects: ["Breee/3"]
 body:
   - type: input

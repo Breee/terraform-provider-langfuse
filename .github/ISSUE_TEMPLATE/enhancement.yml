@@ -1,7 +1,7 @@
 name: Enhancement
-description: "New resource, data source, or changed behaviour."
+description: "Change to existing behaviour."
 title: ""
-labels: ["enhancement"]
+labels: ["type:enhancement"]
 projects: ["Breee/3"]
 body:
   - type: textarea

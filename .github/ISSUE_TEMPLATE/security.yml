@@ -1,0 +1,34 @@
+name: Security risk
+description: "Secret exposure or weakened safety property (state, logs, plan output, credentials)."
+title: ""
+labels: ["type:security"]
+projects: ["Breee/3"]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: WHAT, description: "What is exposed or weakened, how, and the impact."}
+    validations: {required: true}
+  - type: dropdown
+    id: sev
+    attributes: {label: Severity, options: [high, med, low]}
+    validations: {required: true}
+  - type: textarea
+    id: why
+    attributes: {label: WHY, description: "The user or maintenance problem it solves."}
+    validations: {required: true}
+  - type: textarea
+    id: how
+    attributes: {label: HOW, description: "Intended approach, design decisions, known constraints and API limitations."}
+    validations: {required: true}
+  - type: textarea
+    id: done
+    attributes: {label: DONE, description: "Checkable exit criteria. Each one must be provable by a command + output."}
+    validations: {required: true}
+  - type: textarea
+    id: good
+    attributes: {label: GOOD, description: "Quality bar beyond done: empty follow-up plan, import, drift handling, no secrets in state or logs, documented limitations."}
+    validations: {required: true}
+  - type: textarea
+    id: proof
+    attributes: {label: PROOF, description: "Exact commands/tests that will prove DONE (acceptance test against the local stack, make check-generated, golangci-lint run). Never include credentials or license keys."}
+    validations: {required: true}
